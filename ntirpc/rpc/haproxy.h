@@ -122,9 +122,11 @@ struct proxy_header_addr_ip4_part { /* for TCP/UDP over IPv4, len = 12 */
 	uint16_t src_port;
 	uint16_t dst_port;
 };
+#ifndef __cplusplus
 _Static_assert(
 	sizeof(struct proxy_header_addr_ip4_part) == PP2_ADDR_LEN_INET,
 	"proxy_header_addr_ip4_part size is not equal to PP2_ADDR_LEN_INET");
+#endif
 
 struct proxy_header_addr_ip6_part { /* for TCP/UDP over IPv6, len = 36 */
 	uint8_t src_addr[16];
@@ -132,9 +134,11 @@ struct proxy_header_addr_ip6_part { /* for TCP/UDP over IPv6, len = 36 */
 	uint16_t src_port;
 	uint16_t dst_port;
 };
+#ifndef __cplusplus
 _Static_assert(
 	sizeof(struct proxy_header_addr_ip6_part) == PP2_ADDR_LEN_INET6,
 	"proxy_header_addr_ip6_part size is not equal to PP2_ADDR_LEN_INET6");
+#endif
 
 typedef uint8_t proxy_protocol_tlv_type;
 typedef uint16_t proxy_protocol_tlv_length;
