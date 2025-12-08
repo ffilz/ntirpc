@@ -284,7 +284,7 @@ static CLIENT *getclnthandle(const char *host, const struct netconfig *nconf,
 	if (ad_cache != NULL) {
 		addr = ad_cache->ac_taddr;
 		client =
-		    clnt_tli_ncreate(RPC_ANYFD, nconf, addr,
+		    clnt_tli_ncreate(RPC_ANYFD, nconf, NULL, addr,
 				     (rpcprog_t) RPCBPROG,
 				     (rpcvers_t) RPCBVERS4, 0, 0);
 		if (CLNT_SUCCESS(client)) {
@@ -400,7 +400,7 @@ static CLIENT *getclnthandle(const char *host, const struct netconfig *nconf,
 		}
 #endif
 		client =
-		    clnt_tli_ncreate(RPC_ANYFD, nconf, &taddr,
+		    clnt_tli_ncreate(RPC_ANYFD, nconf, NULL, &taddr,
 				     (rpcprog_t) RPCBPROG,
 				     (rpcvers_t) RPCBVERS4, 0, 0);
 		if (CLNT_SUCCESS(client)) {

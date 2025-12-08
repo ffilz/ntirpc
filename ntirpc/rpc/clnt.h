@@ -459,8 +459,9 @@ clnt_tp_ncreate(const char *hostname, const rpcprog_t prog,
  */
 
 extern CLIENT *clnt_tli_ncreate(const int, const struct netconfig *,
-				struct netbuf *, const rpcprog_t,
-				const rpcvers_t, const u_int, const u_int);
+				struct netbuf *, struct netbuf *,
+				const rpcprog_t, const rpcvers_t,
+				const u_int, const u_int);
 /*
  * const register int fd;  -- fd
  * const struct netconfig *nconf; -- netconfig structure

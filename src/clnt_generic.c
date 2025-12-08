@@ -272,8 +272,8 @@ clnt_tp_ncreate_timed(const char *hostname, rpcprog_t prog,
 	}
 	if (cl == NULL) {
 		/* __rpc_findaddr_timed failed? */
-		cl = clnt_tli_ncreate(RPC_ANYFD, nconf, svcaddr, prog, vers, 0,
-				      0);
+		cl = clnt_tli_ncreate(RPC_ANYFD, nconf, NULL, svcaddr, prog,
+				      vers, 0, 0);
 	}
 	if (CLNT_SUCCESS(cl)) {
 		/* Reuse the CLIENT handle and change the appropriate fields */
@@ -286,8 +286,8 @@ clnt_tp_ncreate_timed(const char *hostname, rpcprog_t prog,
 			(void)CLNT_CONTROL(cl, CLSET_VERS, (void *)&vers);
 		} else {
 			CLNT_DESTROY(cl);
-			cl = clnt_tli_ncreate(RPC_ANYFD, nconf, svcaddr, prog,
-					      vers, 0, 0);
+			cl = clnt_tli_ncreate(RPC_ANYFD, nconf, NULL, svcaddr,
+					      prog, vers, 0, 0);
 		}
 	}
 	mem_free(svcaddr->buf, sizeof(*svcaddr->buf));
@@ -305,8 +305,9 @@ clnt_tp_ncreate_timed(const char *hostname, rpcprog_t prog,
  */
 CLIENT *
 clnt_tli_ncreate(int fd, const struct netconfig *nconf,
-		 struct netbuf *svcaddr, rpcprog_t prog,
-		 rpcvers_t vers, u_int sendsz, u_int recvsz)
+		 struct netbuf *bindaddr, struct netbuf *svcaddr,
+		 rpcprog_t prog, rpcvers_t vers,
+		 u_int sendsz, u_int recvsz)
 {
 	CLIENT *cl;		/* client handle */
 	struct __rpc_sockinfo si;
@@ -335,7 +336,25 @@ clnt_tli_ncreate(int fd, const struct netconfig *nconf,
 		servtype = nconf->nc_semantics;
 		if (!__rpc_fd2sockinfo(fd, &si))
 			goto err;
-		bindresvport(fd, NULL);
+		if (bindaddr == NULL)
+			bindresvport(fd, NULL);
+		else {
+			struct sockaddr *addr;
+
+			addr = (struct sockaddr *)bindaddr->buf;
+
+			if (si.si_af != addr->sa_family) {
+				__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: %s",
+					__func__,
+					clnt_sperrno(RPC_TLIERROR));
+				cl = clnt_raw_ncreate(prog, vers);
+				/* XXX */
+				cl->cl_error.re_status = RPC_TLIERROR;
+				goto err1;
+			}
+
+			bindresvport(fd, (struct sockaddr_in *)addr);
+		}
 	} else {
 		if (!__rpc_fd2sockinfo(fd, &si))
 			goto err;
