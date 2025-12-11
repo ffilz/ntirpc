@@ -414,11 +414,17 @@ svc_xprt_foreach(svc_xprt_each_func_t each_f, void *arg)
 					goto restart;
 				}
 			}
-			/* If exits earlier, clear the flag explicitly */
+			/*
+			 * Get the next node BEFORE releasing the reference.
+			 * SVC_RELEASE may trigger destruction if refcnt drops
+			 * to 0, which frees the memory. The memory can be
+			 * immediately reused by another xprt (use-after-free).
+			 */
+			n = opr_rbtree_next(n);
+			/* Now safe to release - we have the next node */
 			atomic_clear_uint16_t_bits(
 				&rec->xprt.xp_flags, SVC_XPRT_TREE_LOCKED);
 			SVC_RELEASE(&rec->xprt, SVC_RELEASE_FLAG_NONE);
-			n = opr_rbtree_next(n);
 		}		/* curr partition */
 		rwlock_unlock(&t->lock); /* t !LOCKED */
 		p_ix++;
