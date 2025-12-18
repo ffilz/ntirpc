@@ -29,8 +29,7 @@
  * Implementation patterns have been derived from GNUTLS library
  * especially from server.c patterns
  *
- * Routines used for entertaining TLS in NFS-Ganesha.
- *
+ * Routines used for support TLS in NFS-Ganesha.
  *
  */
 #include "gsh_tls.h"
@@ -39,6 +38,7 @@
 static gnutls_priority_t global_priority;
 static void gsh_tls_enhanced_debug_callback(int level, const char *str);
 static int gsh_tls_verify_certificate(gnutls_session_t session);
+
 /* Helper function to get GnuTLS error string */
 static char *get_gnutls_error(int error_code)
 {
@@ -67,10 +67,10 @@ gsh_tls_cred_t *gsh_tls_init(const char *cert_file, const char *key_file,
 			     const char *min_version, bool ktls, bool debug)
 {
 	int ret;
-
-	LogDebugTLS(TLS_DISPATCH, "%s:%" PRId32 , __func__, __LINE__);
 	char priority_str[MAX_PRIORITY_STR] = { 0 };
 	gnutls_certificate_credentials_t global_creds = NULL;
+
+	LogDebugTLS(TLS_DISPATCH, "%s:%" PRId32 , __func__, __LINE__);
 	/* Initialize GnuTLS */
 	ret = gnutls_global_init();
 	if (ret < 0) {
@@ -131,11 +131,12 @@ gsh_tls_cred_t *gsh_tls_init(const char *cert_file, const char *key_file,
 		snprintf(priority_str, MAX_PRIORITY_STR, "NORMAL:-VERS-ALL:+%s",
 			 "VERS-TLS1.3");
 
-	// If custom cipher list provided, append it, else do the default
+	/* If custom cipher list provided, append it, else do the default*/
 	if (ciphers && strlen(ciphers) > 0) {
 		strncat(priority_str, ciphers,
 			MAX_PRIORITY_STR - strlen(priority_str) - 1);
 	}
+
 	LogDebugTLS(TLS_INIT, "Setting priority: %s", priority_str);
 	ret = gnutls_priority_init(&global_priority, priority_str, NULL);
 	if (ret < 0) {
@@ -488,11 +489,24 @@ retry:
 		}
 		offset += ret;
 	}
+	/* restore original flags */
 	if (nonblock)
-		fcntl(fd, F_SETFL, orig_flags); // Restore original flags
+		fcntl(fd, F_SETFL, orig_flags);
 
 	LogDebugTLS(TLS_DISPATCH, "Recv Completed len: %" PRId64 , offset);
 	return offset;
+}
+
+/**
+ * Function provides details of the pending data in library internal bufferes
+ * only for recv
+ *
+ * @param ctx          TLS context
+ * @return             Number of bytes cached in internal buffers
+ */
+int gsh_tls_datapending(gsh_tls_ctx_t *ctx)
+{
+        return gnutls_record_check_pending(ctx->session);
 }
 
 /**
@@ -554,8 +568,9 @@ retry:
 		}
 	}
 
+	/* Restore original Flags */
 	if (nonblock)
-		fcntl(fd, F_SETFL, orig_flags); // Restore original flags
+		fcntl(fd, F_SETFL, orig_flags);
 
 	LogDebugTLS(TLS_DISPATCH, "Send Completed len: %" PRId64 , total_sent);
 	return total_sent;
@@ -599,6 +614,10 @@ bool gsh_tls_verify_peer(gsh_tls_ctx_t *ctx, char *peer_identity,
 {
 	unsigned int status;
 	int ret;
+	const gnutls_datum_t *cert_list;
+	unsigned int cert_list_size;
+	/* To extract Common Name from certificate */
+	gnutls_x509_crt_t cert;
 
 	LogDebugTLS(TLS_HANDSHAKE, "%s:%" PRId32 , __func__, __LINE__);
 
@@ -608,9 +627,6 @@ bool gsh_tls_verify_peer(gsh_tls_ctx_t *ctx, char *peer_identity,
 	}
 
 	/* Check if client provided a certificate */
-	const gnutls_datum_t *cert_list;
-	unsigned int cert_list_size;
-
 	cert_list = gnutls_certificate_get_peers(ctx->session, &cert_list_size);
 
 	if (cert_list == NULL || cert_list_size == 0) {
@@ -646,9 +662,6 @@ bool gsh_tls_verify_peer(gsh_tls_ctx_t *ctx, char *peer_identity,
 		}
 		return false;
 	}
-
-	/* Extract Common Name from certificate */
-	gnutls_x509_crt_t cert;
 
 	ret = gnutls_x509_crt_init(&cert);
 	if (ret < 0) {

@@ -1395,6 +1395,10 @@ again:
 		} else {
 			XPRT_UNIQUE_AUTO_TRACEPOINT(xprt, recv_exit,
 				TRACE_DEBUG, "recv exit");
+#if USE_TLS
+			if (SVC_TLS_DATAPENDING(xprt) == true)
+				svc_tls_send_event(xprt);
+#endif
 		}
 
 		return SVC_STAT(xprt);
@@ -1424,6 +1428,11 @@ again:
 
 		return SVC_STAT(xprt);
 	}
+
+#if USE_TLS
+	if (SVC_TLS_DATAPENDING(xprt) == true)
+		svc_tls_send_event(xprt);
+#endif
 
 	XPRT_UNIQUE_AUTO_TRACEPOINT(xprt, calling_svc_request,
 		TRACE_DEBUG, "Calling svc_request");

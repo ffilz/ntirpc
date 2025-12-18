@@ -77,13 +77,15 @@
 /* TLS context structure */
 typedef struct gsh_tls_ctx {
 #ifdef USE_OPENSSL
-	struct ssl_st *ssl;
+	struct ssl_st *ssl; /* openSSL session */
 	struct ssl_ctx_st *ctx;
 #endif
 
 #ifdef USE_GNUTLS
-	//struct gnutls_session_int *session;
-	//struct gnutls_certificate_credentials_st *cred;
+	/*
+	struct gnutls_session_int *session;
+	struct gnutls_certificate_credentials_st *cred;
+	*/
 	gnutls_session_t session; /* GnuTLS session */
 	gnutls_certificate_credentials_t creds; /* GnuTLS credentials */
 #endif
@@ -101,10 +103,16 @@ typedef struct gsh_tls_config {
 	char *ca_file;
 	char *ciphers;
 	char *min_version;
-	time_t session_timeout;
+	time_t session_timeout; /* for future use for session keyupdates */
 	bool ktls; /* Enable kernel TLS if available */
 	bool debug;
 } gsh_tls_config_t;
+
+/* libs cache the data in buffers, signal stucture used for DPR */
+struct gsh_tls_signal_dpr {
+	uint32_t signal;
+	int fd;
+};
 
 #ifdef USE_OPENSSL
 typedef SSL_CTX gsh_tls_cred_t;

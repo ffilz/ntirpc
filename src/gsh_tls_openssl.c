@@ -29,8 +29,7 @@
  * Implementation patterns have been derived from openSSL library
  * especially from server.c patterns
  *
- * Routines used for entertaining TLS in NFS-Ganesha.
- *
+ * Routines used for supporting TLS in NFS-Ganesha.
  *
  */
 
@@ -80,18 +79,20 @@ gsh_tls_cred_t *gsh_tls_init(const char *cert_file, const char *key_file,
 	SSL_library_init();
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
-	const SSL_METHOD *method = TLS_method(); // supports both client/server
+	/* Supports both client/server */
+	const SSL_METHOD *method = TLS_method();
 
 	/* Create SSL context */
-	//global_ctx = SSL_CTX_new(TLS_server_method());
 	global_ctx = SSL_CTX_new(method);
 	if (!global_ctx) {
 		LogCritTLS(TLS_INIT, "Failed to create SSL context: %s",
 			   get_ssl_error());
 		return NULL;
 	}
+
 	if (debug)
 		SSL_CTX_set_info_callback(global_ctx, gsh_tls_info_callback);
+
 	/* Enable KTLS enable */
 	if (ktls)
 		SSL_CTX_set_options(global_ctx, SSL_OP_ENABLE_KTLS);
@@ -185,19 +186,6 @@ gsh_tls_cred_t *gsh_tls_init(const char *cert_file, const char *key_file,
 		}
 	}
 
-#if 0
-	/* Enable session caching */
-	SSL_CTX_set_session_cache_mode(global_ctx, SSL_SESS_CACHE_SERVER);
-	SSL_CTX_set_timeout(global_ctx, 300); /* 5 minutes session timeout */
-
-	/* Enable session tickets */
-	if (SSL_CTX_set_session_ticket_cb(global_ctx, NULL, NULL, NULL) != 1) {
-		LogWarnTLS(TLS_INIT, "Failed to enable session tickets: %s",
-				ERR_error_string(ERR_get_error(), NULL));
-		/* Not fatal, continue anyway */
-	}
-#endif
-
 	/* Set up an ex_data index for associating
 	 * gsh_tls_ctx_t with SSL objects */
 	ssl_ctx_index = SSL_CTX_get_ex_new_index(0, NULL, NULL, NULL, NULL);
@@ -205,7 +193,7 @@ gsh_tls_cred_t *gsh_tls_init(const char *cert_file, const char *key_file,
 		LogCritTLS(TLS_INIT, "Failed to get SSL ex_data index");
 		exit(1);
 	}
-	if (!SSL_CTX_set_num_tickets(global_ctx, 1)) {
+	if (!SSL_CTX_set_num_tickets(global_ctx, 0)) {
 		LogCritTLS(TLS_INIT, "Failed to set num tickets on SSL");
 		exit(1);
 	}
@@ -254,14 +242,16 @@ gsh_tls_ctx_t *gsh_tls_ctx_init(int fd, gsh_tls_cred_t *cred, bool is_server)
 		free(ctx);
 		return NULL;
 	}
-	// Optionally set server/client specific behavior before handshake
+
+	/* Optionally set server/client specific behavior before handshake */
 	if (is_server) {
-		LogEventTLS(TLS_INIT, "FD:%" PRId32 " SERVER_METHOD", fd);
-		SSL_set_accept_state(ctx->ssl); // server
+		LogDebugTLS(TLS_INIT, "FD:%" PRId32 " SERVER_METHOD", fd);
+		SSL_set_accept_state(ctx->ssl);
 	} else {
-		LogEventTLS(TLS_INIT, "FD:%" PRId32 " CLIENT_METHOD", fd);
-		SSL_set_connect_state(ctx->ssl); // client
+		LogDebugTLS(TLS_INIT, "FD:%" PRId32 " CLIENT_METHOD", fd);
+		SSL_set_connect_state(ctx->ssl);
 	}
+	LogDebugTLS(TLS_SHUTDOWN, "ctx_init:%x", ctx);
 
 	return ctx;
 }
@@ -301,9 +291,10 @@ retry:
 		const char *servername =
 			SSL_get_servername(ctx->ssl, TLSEXT_NAMETYPE_host_name);
 		if (servername) {
-			printf("SNI hostname: %s\n", servername);
+			LogDebugTLS(TLS_HANDSHAKE, "SNI hostname: %s",
+					servername);
 		} else {
-			printf("No SNI hostname received\n");
+			LogDebugTLS(TLS_HANDSHAKE, "No SNI hostname received");
 		}
 		pthread_mutex_unlock(&(ctx->ctx_lock));
 		return true;
@@ -437,16 +428,18 @@ bool gsh_tls_verify_peer(gsh_tls_ctx_t *ctx, char *peer_identity,
  */
 int gsh_tls_recv(gsh_tls_ctx_t *ctx, void *buf, size_t len, int flags)
 {
-	int ret;
+	int ret=0;
 	int error_code = 0;
-	int fd = ctx->fd;
-	int orig_flags = fcntl(fd, F_GETFL, 0);
+	int orig_flags = 0;
+	int fd = 0;
 	//bool nonblock = flags & MSG_DONTWAIT;
 	bool nonblock = 0;
 	ssize_t offset = 0;
 
 	if (!ctx || !ctx->ssl)
 		return EINVAL;
+	fd = ctx->fd;
+	orig_flags = fcntl(fd, F_GETFL, 0);
 
 	if (nonblock)
 		fcntl(fd, F_SETFL, orig_flags | O_NONBLOCK);
@@ -478,11 +471,24 @@ retry:
 		}
 		offset += ret;
 	}
+	/* Restore original flags */
 	if (nonblock)
-		fcntl(fd, F_SETFL, orig_flags); // Restore original flags
+		fcntl(fd, F_SETFL, orig_flags);
 
 	LogDebugTLS(TLS_DISPATCH, "Recv Completed len: %" PRId64 , offset);
 	return offset;
+}
+
+/**
+ * Function provides details of the pending data in library internal bufferes
+ * only for recv
+ *
+ * @param ctx          TLS context
+ * @return             Number of bytes cached in internal buffers
+ */
+int gsh_tls_datapending(gsh_tls_ctx_t *ctx)
+{
+	return SSL_pending(ctx->ssl);
 }
 
 /**
@@ -495,15 +501,18 @@ retry:
  */
 int gsh_tls_send(gsh_tls_ctx_t *ctx, const struct msghdr *msg, int flags)
 {
-	int fd = ctx->fd;
-	int orig_flags = fcntl(fd, F_GETFL, 0);
+	int fd ;
+	int orig_flags;
 	//bool nonblock = flags & MSG_DONTWAIT;
 	bool nonblock = 0;
 	ssize_t total_sent = 0;
 	int error_code = 0;
 
-	if (!ctx->ssl)
+	if (!ctx || !ctx->ssl)
 		return EINVAL;
+
+	fd = ctx->fd;
+	orig_flags = fcntl(fd, F_GETFL, 0);
 
 	if (nonblock)
 		fcntl(fd, F_SETFL, orig_flags | O_NONBLOCK);
@@ -580,7 +589,7 @@ bool gsh_tls_close(gsh_tls_ctx_t *ctx)
 		}
 
 		if (ret < 0) {
-			// Optionally log SSL error
+			/* Optionally log SSL error */
 			int err = SSL_get_error(ctx->ssl, ret);
 
 			LogDebugTLS(TLS_SHUTDOWN, "shutdown failed %" PRId32
@@ -629,13 +638,13 @@ bool gsh_tls_key_update(gsh_tls_ctx_t *ctx)
 		return false;
 	}
 
-	// Request peer to update keys for both directions
+	/* Request peer to update keys for both directions */
 	if (!SSL_key_update(ctx->ssl, SSL_KEY_UPDATE_REQUESTED)) {
 		LogWarnTLS(TLS_HANDSHAKE, "SSL_key_update failed");
 		return false;
 	}
 
-	// SSL_do_handshake must be called to complete the key update process
+	/* SSL_do_handshake must be called to complete the key update process */
 	if (SSL_do_handshake(ctx->ssl) <= 0) {
 		int err = SSL_get_error(ctx->ssl, -1);
 
@@ -650,7 +659,7 @@ bool gsh_tls_key_update(gsh_tls_ctx_t *ctx)
 	return true;
 }
 
-/*debug callback registered with lib to get detailed o/p of whats happening */
+/* Debug callback registered with lib to get detailed o/p of whats happening */
 static void gsh_tls_info_callback(const SSL *ssl, int where, int ret)
 {
 	const char *str = SSL_state_string_long(ssl);

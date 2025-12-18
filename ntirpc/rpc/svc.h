@@ -180,6 +180,7 @@ typedef struct svc_init_params {
 #define SVC_XPRT_FLAG_REMOTE_ADDR_SET	0x0200	/* remote addr was final set */
 #define SVC_XPRT_FLAG_READY		0x0400	/* ready to use */
 #define SVC_XPRT_FLAG_IOQ_WRITING	0x0800	/* xprt is used by svc_ioq_write */
+#define SVC_XPRT_FLAG_TLS_MORE_DATA_AVAILABLE 0x1000 /* TLS specific more data available on xprt to read */
 
 #define SVC_XPRT_FLAG_DESTROYED (SVC_XPRT_FLAG_DESTROYING \
 				| SVC_XPRT_FLAG_RELEASING)
@@ -473,6 +474,7 @@ __END_DECLS
 int xp_tls_send_impl(SVCXPRT *xprt, const struct msghdr *msg, int flags);
 int xp_tls_recv_impl(SVCXPRT *xprt, void *buf, size_t len, int flags);
 void xp_tls_close_impl(SVCXPRT *xprt);
+int xp_tls_datapending_impl(SVCXPRT *xprt);
 /*
  * For stunnel:
  * In svc_recv, code flow checks whether it is a client handshake message.
@@ -504,7 +506,7 @@ void xp_tls_close_impl(SVCXPRT *xprt);
 			LogDebugTLS(TLS_DISPATCH,                              \
 				    "RWaiting established xprt:%p fd:%" PRId32,\
 				    xprt, xprt->xp_fd);                        \
-			usleep(1000);                                          \
+			usleep(100000);                                        \
 		}                                                              \
 		if (xprt->xp_tls.tls_established == true)                      \
 			__ret = xp_tls_recv_impl(xprt, address, bytes, flags); \
@@ -521,7 +523,7 @@ void xp_tls_close_impl(SVCXPRT *xprt);
 			LogDebugTLS(TLS_DISPATCH,                              \
 				    "SWaiting established xprt:%p fd:%" PRId32,\
 				    xprt, xprt->xp_fd);                        \
-			usleep(1000);                                          \
+			usleep(100000);                                        \
 		}                                                              \
 		if (xprt->xp_tls.tls_established == true)                      \
 			__ret = xp_tls_send_impl(xprt, msg, MSG_DONTWAIT);     \
@@ -533,6 +535,34 @@ void xp_tls_close_impl(SVCXPRT *xprt);
 	({                                                \
 		if (xprt->xp_tls.tls_established == true) \
 			xp_tls_close_impl(xprt);          \
+	})
+
+#define SVC_TLS_DATAPENDING(xprt)                               	       \
+	({                                                		       \
+		ssize_t __ret;                                                 \
+		if (xprt->xp_tls.tls_established == true) {		       \
+			int local_len = 0;				       \
+			int any_data_on_socket;				       \
+			__ret = xp_tls_datapending_impl(xprt);                 \
+			if (__ret > 0) {				       \
+				local_len = recv(xprt->xp_fd, 		       \
+						 &any_data_on_socket, 4,       \
+						 MSG_PEEK|MSG_DONTWAIT);       \
+				if (local_len == -1) {			       \
+					LogDebugTLS(TLS_DISPATCH,              \
+						    "DPR xprt:%p fd:%" PRId32  \
+					            " lib:%" PRId32            \
+					            " socket:-1",              \
+						    xprt, xprt->xp_fd, __ret); \
+					__ret = 1;			       \
+				} else {				       \
+					__ret = 0;			       \
+				}					       \
+			}						       \
+		} else { 						       \
+			__ret = 0;					       \
+		}							       \
+		__ret;							       \
 	})
 
 bool is_handshake_msg(SVCXPRT *xprt);
