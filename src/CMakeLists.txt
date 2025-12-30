@@ -136,7 +136,7 @@ set_target_properties(ntirpc PROPERTIES LINK_FLAGS
   SOVERSION "${NTIRPC_MAJOR_VERSION}${NTIRPC_MINOR_VERSION}"
   )
 
-install(TARGETS ntirpc DESTINATION ${LIB_INSTALL_DIR})
+install(TARGETS ntirpc DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
 ########### install files ###############
 

@@ -36,18 +36,7 @@ set( PACKNAME "${NTIRPC_VERSION}" )
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Install destination, if built standalone
-get_property(USE_LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-if (USE_LIB64)
-	set(LIB_INSTALL_DIR lib64 CACHE PATH
-		"Specify name of libdir inside install path")
-else (USE_LIB64)
-	set(LIB_INSTALL_DIR lib CACHE PATH
-		"Specify name of libdir inside install path")
-endif (USE_LIB64)
-
-set(SYSTEM_LIBRARIES ${SYSTEM_LIBRARIES})
-set(BINARY_LIBRARIES ${BINARY_LIBRARIES})
+include(GNUInstallDirs)
 
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC _GIT_HEAD_COMMIT)
@@ -337,6 +326,6 @@ add_custom_target( srpm
 endif (NOT TARGET rpm)
 ########### install files ###############
 
-install(FILES  ${PROJECT_BINARY_DIR}/libntirpc.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-install(DIRECTORY  ${NTIRPC_BASE_DIR}/ntirpc DESTINATION include)
-install(FILES  ${PROJECT_BINARY_DIR}/ntirpc/version.h DESTINATION include/ntirpc)
+install(FILES  ${PROJECT_BINARY_DIR}/libntirpc.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+install(DIRECTORY  ${NTIRPC_BASE_DIR}/ntirpc DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES  ${PROJECT_BINARY_DIR}/ntirpc/version.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ntirpc)
