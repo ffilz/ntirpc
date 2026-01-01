@@ -8,7 +8,7 @@ SET(ntirpcmonitoring_SRCS
 
 add_library(ntirpcmonitoring SHARED ${ntirpcmonitoring_SRCS})
 add_sanitizers(ntirpcmonitoring)
-set_target_properties(ntirpcmonitoring PROPERTIES COMPILE_FLAGS "-fPIC"
+set_target_properties(ntirpcmonitoring PROPERTIES
   VERSION ${NTIRPC_VERSION}
   SOVERSION "${NTIRPC_MAJOR_VERSION}${NTIRPC_MINOR_VERSION}"
   )

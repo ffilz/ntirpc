@@ -5,9 +5,6 @@ add_definitions(
   -D_GNU_SOURCE
 )
 
-# ok on Linux and FreeBSD w/GCC and clang compilers
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
-
 ########### next target ###############
 
 SET(ntirpc_common_SRCS
