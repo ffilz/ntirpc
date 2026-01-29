@@ -1269,6 +1269,17 @@ again:
 			"sx_fbtbc = %08x", (int)xd->sx_fbtbc);
 
 		if (xd->sx_fbtbc == PP2_SIG_UINT32) {
+			/* mark sx_fbtbc to 0,
+			 * In case of HAPROXY_RET_CODE__IGNORE_LOCAL, which
+			 * do rearm the xprt recv fd.
+			 * There is a small race if the thread gets scheduled
+			 * out after rearm and epoll_wait gets data available
+			 * event, then new recv endup in elsecase
+			 * "if (!xd->sx_fbtbc)"
+			 * and will cause uv to NULL */
+			uint32_t temp = xd->sx_fbtbc;
+			xd->sx_fbtbc = 0;
+
 			/* HA Proxy V2? */
 			enum haproxy_ret_code ret = handle_haproxy_header(xprt);
 			switch (ret) {
@@ -1278,17 +1289,15 @@ again:
 					return SVC_STAT(xprt);
 				}
 				/* Now look to see if there's more... */
-	                        xd->sx_fbtbc = 0;
 				hap_again = true;
 				goto again;
 			case HAPROXY_RET_CODE__FAILURE:
 				SVC_DESTROY(xprt);
 				return SVC_STAT(xprt);
 			case HAPROXY_RET_CODE__IGNORE_LOCAL:
-				/* clear off sx_fbtbc */
-	                        xd->sx_fbtbc = 0;
 				return SVC_STAT(xprt);
 			case HAPROXY_RET_CODE__NOT_HAPROXY:
+				xd->sx_fbtbc = temp;
 				break;
 			}
 		}
