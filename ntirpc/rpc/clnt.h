@@ -458,10 +458,27 @@ clnt_tp_ncreate(const char *hostname, const rpcprog_t prog,
  * Generic TLI create routine. Only provided for compatibility.
  */
 
-extern CLIENT *clnt_tli_ncreate(const int, const struct netconfig *,
-				struct netbuf *, struct netbuf *,
-				const rpcprog_t, const rpcvers_t,
-				const u_int, const u_int);
+extern CLIENT *clnt_tli_ncreate_opt(const int, const struct netconfig *,
+				    struct netbuf *, struct netbuf *,
+				    const rpcprog_t, const rpcvers_t,
+				    const u_int, const u_int, int);
+
+static inline CLIENT *
+clnt_tli_ncreate(int fd, const struct netconfig *nconf,
+		 struct netbuf *bindaddr, struct netbuf *svcaddr,
+		 rpcprog_t prog, rpcvers_t vers,
+		 u_int sendsz, u_int recvsz)
+{
+#ifdef SOL_IPV6
+	int opts = IPV6_V6ONLY;
+#else
+	int opts = 0;
+#endif
+
+	return clnt_tli_ncreate_opt(fd, nconf, bindaddr, svcaddr, prog, vers,
+				    sendsz, recvsz, opts);
+}
+
 /*
  * const register int fd;  -- fd
  * const struct netconfig *nconf; -- netconfig structure

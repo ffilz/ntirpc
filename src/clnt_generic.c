@@ -304,10 +304,10 @@ clnt_tp_ncreate_timed(const char *hostname, rpcprog_t prog,
  * If sizes are 0; appropriate defaults will be chosen.
  */
 CLIENT *
-clnt_tli_ncreate(int fd, const struct netconfig *nconf,
-		 struct netbuf *bindaddr, struct netbuf *svcaddr,
-		 rpcprog_t prog, rpcvers_t vers,
-		 u_int sendsz, u_int recvsz)
+clnt_tli_ncreate_opt(int fd, const struct netconfig *nconf,
+		     struct netbuf *bindaddr, struct netbuf *svcaddr,
+		     rpcprog_t prog, rpcvers_t vers,
+		     u_int sendsz, u_int recvsz, int opt)
 {
 	CLIENT *cl;		/* client handle */
 	struct __rpc_sockinfo si;
@@ -326,7 +326,7 @@ clnt_tli_ncreate(int fd, const struct netconfig *nconf,
 			return (cl);
 		}
 
-		fd = __rpc_nconf2fd(nconf);
+		fd = __rpc_nconf2fd_flags_opt(nconf, 0, opt);
 
 		if (fd == -1)
 			goto err;
