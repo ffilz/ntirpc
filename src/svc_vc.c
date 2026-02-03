@@ -1179,23 +1179,6 @@ svc_vc_recv(SVCXPRT *xprt)
 
 	XPRT_AUTO_TRACEPOINT(xprt, recv_start, TRACE_DEBUG, "recv_start");
 
-#ifdef USE_TLS
-	/* This is stunnel like TLS handshake request handling
-	 * this internally does handshake if this is handshake msg*/
-	if (!((xprt)->xp_tls.not_first_packet)) {
-		if (is_handshake_msg(xprt)) {
-			if (unlikely(svc_rqst_rearm_events(xprt,
-						SVC_XPRT_FLAG_ADDED_RECV))) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
-						"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
-						__func__, xprt, xprt->xp_fd);
-			}
-			return SVC_STAT(xprt);
-		}
-		(xprt)->xp_tls.not_first_packet = true;
-
-	}
-#endif
 	/* no need for locking, only one svc_rqst_xprt_task() per event.
 	 * depends upon svc_rqst_rearm_events() for ordering.
 	 */
@@ -1212,6 +1195,24 @@ svc_vc_recv(SVCXPRT *xprt)
 	if (!xd->sx_fbtbc) {
 again:
 #ifdef USE_TLS
+               /* This is stunnel like TLS handshake request handling
+                * this internally does handshake if this is handshake msg*/
+                if (!((xprt)->xp_tls.not_first_packet)) {
+                        if (is_handshake_msg(xprt)) {
+                                (xprt)->xp_tls.not_first_packet = true;
+                                xd->sx_fbtbc = 0;
+                                if (unlikely(svc_rqst_rearm_events(xprt,
+                                                                SVC_XPRT_FLAG_ADDED_RECV))) {
+                                        __warnx(TIRPC_DEBUG_FLAG_ERROR,
+                                                        "%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
+                                                        __func__, xprt, xprt->xp_fd);
+                                        SVC_DESTROY(xprt);
+                                }
+                                return SVC_STAT(xprt);
+                        }
+                        (xprt)->xp_tls.not_first_packet = true;
+                }
+
 		rlen = SVC_TLS_RECV(xprt, &xd->sx_fbtbc, BYTES_PER_XDR_UNIT,
 				    hap_again ? MSG_DONTWAIT : MSG_WAITALL);
 #else
@@ -1290,6 +1291,9 @@ again:
 				}
 				/* Now look to see if there's more... */
 				hap_again = true;
+#ifdef USE_TLS
+                                xprt->xp_tls.not_first_packet = false;
+#endif
 				goto again;
 			case HAPROXY_RET_CODE__FAILURE:
 				SVC_DESTROY(xprt);
