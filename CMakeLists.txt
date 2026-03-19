@@ -237,14 +237,6 @@ set(SYSTEM_LIBRARIES
   ${SYSTEM_LIBRARIES}
 )
 
-if (NOT BSDBASED)
-  find_package(NSL) # sockets
-  set(SYSTEM_LIBRARIES
-    ${SYSTEM_LIBRARIES}
-    ${NSL_LIBRARY}
-  )
-endif (NOT BSDBASED)
-
 set(LIBNTIRPC_MAP "${PROJECT_BINARY_DIR}/src/libntirpc.map")
 # subst files (need add_custom_command for dependency, fyi)
 configure_file(

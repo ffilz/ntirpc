@@ -27,7 +27,6 @@ SET(ntirpc_common_SRCS
   getnetconfig.c
   getnetpath.c
   getpeereid.c
-  getrpcent.c
   mt_misc.c
   pmap_prot.c
   pmap_prot2.c
