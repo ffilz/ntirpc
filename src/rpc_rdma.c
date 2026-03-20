@@ -1333,7 +1333,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 static void *
 rpc_rdma_cm_thread(void *nullarg)
 {
-	RDMAXPRT *rdma_xprt;
+	RDMAXPRT *rdma_xprt = NULL;
 	struct rdma_cm_event *event;
 	struct epoll_event epoll_events[EPOLL_EVENTS];
 	int i;
