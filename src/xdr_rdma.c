@@ -1190,7 +1190,7 @@ xdr_rdma_add_outbufs_hdr(RDMAXPRT *rdma_xprt)
 	uint32_t buffer_total = rdma_xprt->sm_dr.send_hdr_sz * hdr_qdepth;
 	struct rpc_io_bufs *io_buf = NULL;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_total %llu, sendsz %llu sq %llu rdma_xprt %p pagesz %llu",
 		__func__, buffer_total, rdma_xprt->sm_dr.send_hdr_sz, hdr_qdepth,
 		rdma_xprt, rdma_xprt->sm_dr.pagesz);
@@ -1200,7 +1200,7 @@ xdr_rdma_add_outbufs_hdr(RDMAXPRT *rdma_xprt)
 	assert(buffer_aligned);
 	memset(buffer_aligned, 0, buffer_total);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_aligned at %p protection domain %p rdma_xprt %p",
 		__func__, buffer_aligned, rdma_xprt->pd->pd, rdma_xprt);
 
@@ -1301,7 +1301,7 @@ xdr_rdma_add_inbufs_data(RDMAXPRT *rdma_xprt)
 	uint32_t buffer_total = rdma_xprt->sm_dr.recvsz * data_qdepth;
 	struct rpc_io_bufs *io_buf = NULL;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_total %llu, recvsz %llu rq %llu rdma_xprt %p pagesz %llu",
 		__func__, buffer_total, rdma_xprt->sm_dr.recvsz, data_qdepth,
 		rdma_xprt, rdma_xprt->sm_dr.pagesz);
@@ -1311,7 +1311,7 @@ xdr_rdma_add_inbufs_data(RDMAXPRT *rdma_xprt)
 	assert(buffer_aligned);
 	memset(buffer_aligned, 0, buffer_total);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_aligned at %p protection domain %p rdma_xprt %p",
 		__func__, buffer_aligned, rdma_xprt->pd->pd, rdma_xprt);
 
@@ -1366,7 +1366,7 @@ xdr_rdma_create(RDMAXPRT *rdma_xprt)
 
 	rdma_xprt->buffer_total = tirpc_buff_total + total_hdr_sz;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_total %llu(%llu + %llu), rdma_xprt %p pagesz %llu "
 		"recvsz data %llu hdr %llu rq %llu "
 		"sendsz data %llu hdr %llu sq %llu",
@@ -1380,7 +1380,7 @@ xdr_rdma_create(RDMAXPRT *rdma_xprt)
 	assert(rdma_xprt->buffer_aligned);
 	memset(rdma_xprt->buffer_aligned, 0, rdma_xprt->buffer_total);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_aligned at %p protection domain %p rdma_xprt %p",
 		__func__, rdma_xprt->buffer_aligned, rdma_xprt->pd->pd, rdma_xprt);
 

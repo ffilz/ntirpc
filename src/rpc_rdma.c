@@ -330,7 +330,7 @@ rdma_cleanup_cbcs(RDMAXPRT *rdma_xprt) {
 	int cleanup_count = 0;
 	struct poolq_head *ioqh = &rdma_xprt->cbclist;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s() before cleanup "
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s() before cleanup "
 	    "%p xp_refcnt %d active requests %d qcount %d",
 	    __func__, &rdma_xprt->sm_dr.xprt,
 	    rdma_xprt->sm_dr.xprt.xp_refcnt, rdma_xprt->active_requests,
@@ -377,7 +377,7 @@ rdma_cleanup_cbcs(RDMAXPRT *rdma_xprt) {
 				cbc_release = true;
 				cbc_release_count = cbc->write_waits;
 
-				__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s active cbc %p "
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s active cbc %p "
 				    "cbc_ref %d read_waits %d write_waits %d "
 				    "active requests %d rdma_xprt %p",
 				    __func__, cbc, cbc->refcnt, cbc->read_waits,
@@ -387,7 +387,7 @@ rdma_cleanup_cbcs(RDMAXPRT *rdma_xprt) {
 
 			if (!cbc_release) {
 				/* Pending request should cleanup this cbc */
-				__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s active cbc %p "
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s active cbc %p "
 				    "cbc_ref %d read_waits %d write_waits %d "
 				    "active requests %d rdma_xprt %p",
 				    __func__, cbc, cbc->refcnt, cbc->read_waits,
@@ -418,7 +418,7 @@ rdma_cleanup_cbcs(RDMAXPRT *rdma_xprt) {
 
 	pthread_mutex_unlock(&ioqh->qmutex);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s() after cleanup "
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s() after cleanup "
 	    "%p xp_refcnt %d active requests %d cleanup count %d "
 	    "qcount %d",
 	    __func__, &rdma_xprt->sm_dr.xprt,
@@ -516,7 +516,7 @@ rpc_rdma_thread_create_epoll_cq(void *(*routine)(void *))
 
 		rpc_rdma_state.cq_thread_ids[rpc_rdma_state.cq_thread_count] = thrid;
 
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() thread %lx spawned for epoll %d",
 			__func__,
 			(unsigned long)thrid,
@@ -662,7 +662,7 @@ rpc_rdma_fd_add(RDMAXPRT *rdma_xprt, int fd, int epollfd)
 		return rc;
 	}
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%p:rpc_rdma_fd_add fd:%d epollfd:%d",
 		pthread_self(), fd, epollfd);
 
@@ -672,7 +672,7 @@ rpc_rdma_fd_add(RDMAXPRT *rdma_xprt, int fd, int epollfd)
 int
 rpc_rdma_fd_del(int fd, int epollfd)
 {
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%p:rpc_rdma_fd_del fd:%d epollfd:%d",
 		pthread_self(), fd, epollfd);
 
@@ -1118,11 +1118,7 @@ rpc_rdma_cq_thread(void *arg)
 	int rc;
 	int epollfd = *((int *) arg);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
-		"%p, Starting rpc_rdma_cq_thread epollfd:%d",
-		pthread_self(), epollfd);
-
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%p, Starting rpc_rdma_cq_thread epollfd:%d",
 		pthread_self(), epollfd);
 
@@ -1228,7 +1224,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 
 	switch (event->event) {
 	case RDMA_CM_EVENT_ADDR_RESOLVED:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p ADDR_RESOLVED",
 			__func__, rdma_xprt);
 		mutex_lock(&rdma_xprt->cm_lock);
@@ -1238,7 +1234,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_ROUTE_RESOLVED:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p ROUTE_RESOLVED",
 			__func__, rdma_xprt);
 		mutex_lock(&rdma_xprt->cm_lock);
@@ -1248,7 +1244,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_ESTABLISHED:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p ESTABLISHED",
 			__func__, rdma_xprt);
 
@@ -1269,7 +1265,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_CONNECT_REQUEST:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p CONNECT_REQUEST",
 			__func__, rdma_xprt);
 		rpc_rdma_state.c_r.id_queue[0] = cm_id;
@@ -1292,7 +1288,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_DISCONNECTED:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p[%u] DISCONNECT EVENT...",
 			__func__, rdma_xprt, rdma_xprt->state);
 
@@ -1301,14 +1297,14 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_DEVICE_REMOVAL:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p[%u] cma detected device removal!!!!",
 			__func__, rdma_xprt, rdma_xprt->state);
 		rc = ENODEV;
 		break;
 
 	case RDMA_CM_EVENT_TIMEWAIT_EXIT:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		    "%s() %p[%u] RDMA_CM_EVENT_TIMEWAIT_EXIT",
 		    __func__, rdma_xprt, rdma_xprt->state);
 
@@ -1501,7 +1497,7 @@ rpc_rdma_destroy_stuff(RDMAXPRT *rdma_xprt)
 static void
 rdma_destroy_cbcs(RDMAXPRT *rdma_xprt) {
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 	    "%s() Destroying xprt %p cbcs qcount %u qsize %u total cbcs_memory %u",
 	    __func__, rdma_xprt, rdma_xprt->cbqh.qcount, rdma_xprt->cbqh.qsize,
 	    rdma_xprt->cbqh.qcount * rdma_xprt->cbqh.qsize);
@@ -1541,7 +1537,7 @@ rdma_destroy_cbcs(RDMAXPRT *rdma_xprt) {
 
 static void
 rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 	    "%s() Destroying xprt %p io_bufs",
 	    __func__, rdma_xprt);
 
@@ -1561,13 +1557,13 @@ rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
 			struct rpc_io_bufs *io_buf =
 				opr_containerof(have, struct rpc_io_bufs, q);
 
-			__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s Destroy io_buf %p ioqh %p count %d",
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s Destroy io_buf %p ioqh %p count %d",
 			    __func__, io_buf, ioqh, ioqh->qcount);
 
 			if ((io_buf->type == IO_BUF_ALL) ||
 			    (io_buf->type == IO_INBUF_HDR)) {
 				struct poolq_head *ioqh_bufs = &rdma_xprt->inbufs_hdr.uvqh;
-				__warnx(TIRPC_DEBUG_FLAG_EVENT,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 				    "%s() Destroying %p inbufs_hdr head %p count %d io_buf %p",
 				    __func__, rdma_xprt, ioqh_bufs, ioqh_bufs->qcount, io_buf);
 				xdr_rdma_buf_pool_destroy(ioqh_bufs, io_buf);
@@ -1576,7 +1572,7 @@ rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
 			if ((io_buf->type == IO_BUF_ALL) ||
 			    (io_buf->type == IO_OUTBUF_HDR)) {
 				struct poolq_head *ioqh_bufs = &rdma_xprt->outbufs_hdr.uvqh;
-				__warnx(TIRPC_DEBUG_FLAG_EVENT,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 				    "%s() Destroying %p outbufs_hdr head %p count %d io_buf %p",
 				    __func__, rdma_xprt, ioqh_bufs, ioqh_bufs->qcount, io_buf);
 				xdr_rdma_buf_pool_destroy(ioqh_bufs, io_buf);
@@ -1585,7 +1581,7 @@ rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
 			if ((io_buf->type == IO_BUF_ALL) ||
 			    (io_buf->type == IO_INBUF_DATA)) {
 				struct poolq_head *ioqh_bufs = &rdma_xprt->inbufs_data.uvqh;
-				__warnx(TIRPC_DEBUG_FLAG_EVENT,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 				    "%s() Destroying %p inbufs_data head %p count %d io_buf %p",
 				    __func__, rdma_xprt, ioqh_bufs, ioqh_bufs->qcount, io_buf);
 				xdr_rdma_buf_pool_destroy(ioqh_bufs, io_buf);
@@ -1594,7 +1590,7 @@ rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
 			if ((io_buf->type == IO_BUF_ALL) ||
 			    (io_buf->type == IO_OUTBUF_DATA)) {
 				struct poolq_head *ioqh_bufs = &rdma_xprt->outbufs_data.uvqh;
-				__warnx(TIRPC_DEBUG_FLAG_EVENT,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 				    "%s() Destroying %p outbufs_data head %p count %d io_buf %p",
 				    __func__, rdma_xprt, ioqh_bufs, ioqh_bufs->qcount, io_buf);
 				xdr_rdma_buf_pool_destroy(ioqh_bufs, io_buf);
@@ -1895,7 +1891,7 @@ rpc_rdma_create_qp(RDMAXPRT *rdma_xprt, struct rdma_cm_id *cm_id)
 	    IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
 	    IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER, &qp_attr);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s() %p[%u] ibv_query_qp path mtu %d state %d qp type %d",
 		__func__, rdma_xprt, rdma_xprt->state, attr.qp_state,
 		attr.path_mtu, qp_attr.qp_type);
@@ -2072,7 +2068,7 @@ int
 rpc_rdma_setup_cbq(RDMAXPRT *rdma_xprt,
     struct poolq_head *ioqh, u_int depth, u_int sge)
 {
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s: setup cbq xprt %p depth %d sge %d",
 		__func__, rdma_xprt, depth, sge);
 
@@ -2099,7 +2095,7 @@ rpc_rdma_setup_cbq(RDMAXPRT *rdma_xprt,
 		rpc_rdma_allocate_cbc_locked(ioqh);
 	}
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s Total cbcs_memory %u "
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s Total cbcs_memory %u "
 	    "qcount %u qsize %u xprt %p",
 	    __func__, ioqh->qcount * ioqh->qsize,
 	    ioqh->qcount, ioqh->qsize, rdma_xprt);
@@ -2369,7 +2365,7 @@ rpc_rdma_accept_timedwait(RDMAXPRT *l_rdma_xprt, struct timespec *abstime)
 {
 	struct rdma_cm_id *cm_id;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s() %p[%u] listening (after bind_server)",
 		__func__, l_rdma_xprt, l_rdma_xprt->state);
 
@@ -2436,7 +2432,7 @@ rpc_rdma_bind_client(RDMAXPRT *rdma_xprt)
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_port_space = rdma_xprt->conn_type;
 
-		__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s: resolve %s port %d", __func__,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s: resolve %s port %d", __func__,
 			rdma_xprt->sm_dr.xprt.xp_ip, rdma_xprt->sm_dr.xprt.xp_port);
 		char port_str[SOCK_NAME_MAX];
 		snprintf(port_str, SOCK_NAME_MAX, "%d", rdma_xprt->sm_dr.xprt.xp_port);
