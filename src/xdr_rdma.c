@@ -211,17 +211,18 @@ xdr_rdma_respond_callback_send(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 	int ret = 0;
 	int32_t write_waits = atomic_dec_int32_t(&cbc->write_waits);
 
-	__warnx(TIRPC_DEBUG_FLAG_XDR,
-	    "%s() %p[%u] cbc %p cbc_ref %d write_waits %d\n",
-	    __func__, rdma_xprt, rdma_xprt->state, cbc,
-	    cbc->refcnt, write_waits);
 
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 		    "cbc_ref %d write_waits %d already destroyed",
 		    __func__, rdma_xprt, cbc, cbc->refcnt, write_waits);
 
 		ret =  -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_XDR,
+			"%s() %p[%u] cbc %p cbc_ref %d write_waits %d\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc,
+			cbc->refcnt, write_waits);
 	}
 
 	cbc_release_it(cbc);
@@ -235,17 +236,18 @@ xdr_rdma_destroy_callback_send(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 	int ret = 0;
 	int write_waits = atomic_dec_int32_t(&cbc->write_waits);
 
-	__warnx(TIRPC_DEBUG_FLAG_ERROR,
-	    "%s() %p[%u] cbc %p refs %d write_waits %d\n",
-	    __func__, rdma_xprt, rdma_xprt->state, cbc,
-	    cbc->refcnt, write_waits);
 
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 		    "cbc_ref %d write_waits %d already destroyed",
 		    __func__, rdma_xprt, cbc, cbc->refcnt, write_waits);
 
 		ret = -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			"%s() %p[%u] cbc %p refs %d write_waits %d\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc,
+			cbc->refcnt, write_waits);
 	}
 
 	cbc_release_it(cbc);
@@ -260,15 +262,15 @@ xdr_rdma_respond_callback(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 {
 	int ret = 0;
 
-	__warnx(TIRPC_DEBUG_FLAG_XDR,
-		"%s() %p[%u] cbc %p\n",
-		__func__, rdma_xprt, rdma_xprt->state, cbc);
-
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 			"already destroyed", __func__, rdma_xprt, cbc);
 
 		ret = -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_XDR,
+			"%s() %p[%u] cbc %p\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc);
 	}
 
 	xdr_rdma_callback_signal(cbc, rdma_xprt);
@@ -283,15 +285,16 @@ xdr_rdma_destroy_callback(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 {
 	int ret = 0;
 
-	__warnx(TIRPC_DEBUG_FLAG_ERROR,
-		"%s() %p[%u] cbc %p\n",
-		__func__, rdma_xprt, rdma_xprt->state, cbc);
-
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 			"already destroyed", __func__, rdma_xprt, cbc);
 
 		ret = -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			"%s() %p[%u] cbc %p\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc);
+
 	}
 
 	xdr_rdma_callback_signal(cbc, rdma_xprt);
@@ -308,15 +311,16 @@ xdr_rdma_destroy_callback_recv(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 {
 	int ret = 0;
 
-	__warnx(TIRPC_DEBUG_FLAG_ERROR,
-		"Error in recv callback %s() %p[%u] cbc %p\n",
-		__func__, rdma_xprt, rdma_xprt->state, cbc);
-
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 			"already destroyed", __func__, rdma_xprt, cbc);
 
 		ret = -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			"Error in recv callback %s() %p[%u] cbc %p\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc);
+
 	}
 
 	cbc->cbc_flags = CBC_FLAG_RELEASE;
@@ -1042,7 +1046,7 @@ xdr_rdma_add_bufs_locked(RDMAXPRT *rdma_xprt, struct ibv_mr *mr,
 
 		data->rdma_uv = 1;
 
-		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 			"%s() recvbuf at %p base %p",
 			__func__, data, b_addr);
 
@@ -1439,14 +1443,14 @@ xdr_rdma_create(RDMAXPRT *rdma_xprt)
 	 * we could have max cbcs required will be callq_size * 2 */
 	int callq_size = MAX_RECV_OUTSTANDING(rdma_xprt->xa);
 
-	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "callq size %d", callq_size);
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, "callq size %d", callq_size);
 
 	poolq_head_setup(&rdma_xprt->cbclist);
 
 	while (rdma_xprt->sm_dr.ioq.ioq_uv.uvqh.qcount < callq_size) {
 		/* Post callq_size buffers to do first recvs
 		 * callback will be done on recv which should rearam again */
-		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 			"%s() qcount %d callq size %d",
 			__func__, rdma_xprt->sm_dr.ioq.ioq_uv.uvqh.qcount,
 			callq_size);
