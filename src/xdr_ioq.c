@@ -1857,7 +1857,7 @@ xdr_ioq_allochdrs(XDR *xdrs, u_int start, xdr_vio *vector, int iov_count)
 
 	while (idx < iov_count) {
 		/* Another TRAILER buffer to manage */
-		vio_type vt = vector[idx].vio_type;
+		vio_type_t vt = vector[idx].vio_type;
 
 		__warnx(TIRPC_DEBUG_FLAG_XDR,
 			"Calling xdr_ioq_use_or_allocate for idx %d for %s",

@@ -272,7 +272,11 @@ struct svc_xprt {
 		struct {
 			svc_req_fun_t process_cb;
 			svc_xprt_fun_t remote_addr_set_cb;
+#ifdef __cplusplus
+		}connection_dispatch_ops;
+#else
 		};
+#endif
 		svc_xprt_fun_t rendezvous_cb;
 	}  xp_dispatch;
 	SVCXPRT *xp_parent;
