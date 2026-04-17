@@ -1000,12 +1000,12 @@ xdr_ioq_getstartdatapos_rdma(XDR *xdrs, u_int start, u_int datalen)
 	}
 
 	/*
-	 * Small RDMA Writes
-	 * If data is inline, it should be part of nfs_buffer itself.
-	 * So, to avoid the ILLEGAL_OP, start should advance by datalen
-	 * to pick the correct OP while decoding the COMPOUND ops.
+	 * Small RDMA Writes (Inline RDMA)
+	 * The write data fits entirely within the current (NFS header) UV
+	 * at the current XDR position.  Return 'start' unchanged so that
+	 * XDR_FILLBUFS reads the actual data bytes.
 	 */
-	return start + datalen;
+	return start;
 
 }
 
@@ -1029,9 +1029,15 @@ xdr_ioq_getenddatapos_rdma(XDR *xdrs, u_int start, u_int datalen)
 	 * next nfs header in compound op. */
 	if (datalen > ((uintptr_t)xdrs->x_v.vio_tail - (uintptr_t)xdrs->x_data)) {
 		offset = (uintptr_t)xdrs->x_v.vio_tail - (uintptr_t)xdrs->x_data;
+		return start - offset;
 	}
 
-	return start - offset;
+	/* Inline RDMA: 'start' is the position of the first data byte
+	 * (getstartdatapos returned it unchanged).  'datalen' here is
+	 * RNDUP(data_len), i.e. the data bytes plus any XDR alignment
+	 * padding.  Advance past both so the decoder is positioned at
+	 * the start of the next compound op. */
+	return start + datalen;
 }
 
 static bool
