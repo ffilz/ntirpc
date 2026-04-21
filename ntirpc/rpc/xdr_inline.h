@@ -52,6 +52,17 @@
 #include <rpc/types.h>
 #include <rpc/xdr.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef UNUSED
+#define UNUSED_ATTR __attribute__((unused))
+#define UNUSED(...) UNUSED_(__VA_ARGS__)
+#define UNUSED_(arg) NOT_USED_##arg UNUSED_ATTR
+#endif
+
+
 /*
  * XDR integers
  */
@@ -639,7 +650,7 @@ xdr_bytes_encode(XDR *xdrs, char **cpp, u_int *sizep, u_int maxsize)
 }
 
 static inline bool
-xdr_bytes_free(XDR *xdrs, char **cpp, size_t size)
+xdr_bytes_free(XDR *UNUSED(xdrs), char **cpp, size_t size)
 {
 	if (*cpp) {
 		mem_free(*cpp, size);
@@ -840,7 +851,7 @@ xdr_array_encode(XDR *xdrs, char **cpp, u_int *sizep, u_int maxsize,
 }
 
 static inline bool
-xdr_array_free(XDR *xdrs, char **cpp, u_int *sizep, u_int maxsize,
+xdr_array_free(XDR *xdrs, char **cpp, u_int *sizep, u_int UNUSED(maxsize),
 	       u_int selem, xdrproc_t xdr_elem)
 {
 	char *target = *cpp;
@@ -993,7 +1004,7 @@ xdr_string_encode(XDR *xdrs, char **cpp, u_int maxsize)
 }
 
 static inline bool
-xdr_string_free(XDR *xdrs, char **cpp)
+xdr_string_free(XDR *UNUSED(xdrs), char **cpp)
 {
 	if (*cpp) {
 		mem_free(*cpp, strlen(*cpp) + 1);
@@ -1063,5 +1074,9 @@ inline_xdr_u_longlong_t(XDR *xdrs, u_quad_t *ullp)
 	 */
 	return (inline_xdr_u_int64_t(xdrs, (u_int64_t *) ullp));
 }
+
+#ifdef __cplusplus
+}
+#endif /* extern "C" */
 
 #endif				/* _TIRPC_INLINE_XDR_H */

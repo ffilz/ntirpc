@@ -30,6 +30,13 @@
 
 #include "config.h"
 
+/* Adding macro for compatibilty of c++ compilation */
+#ifdef __cplusplus
+#ifndef _Static_assert
+#define _Static_assert static_assert
+#endif
+#endif
+
 #ifndef _NTIRPC_RPC_HAPROXY_H
 #define _NTIRPC_RPC_HAPROXY_H
 
@@ -122,6 +129,7 @@ struct proxy_header_addr_ip4_part { /* for TCP/UDP over IPv4, len = 12 */
 	uint16_t src_port;
 	uint16_t dst_port;
 };
+
 _Static_assert(
 	sizeof(struct proxy_header_addr_ip4_part) == PP2_ADDR_LEN_INET,
 	"proxy_header_addr_ip4_part size is not equal to PP2_ADDR_LEN_INET");
@@ -132,6 +140,7 @@ struct proxy_header_addr_ip6_part { /* for TCP/UDP over IPv6, len = 36 */
 	uint16_t src_port;
 	uint16_t dst_port;
 };
+
 _Static_assert(
 	sizeof(struct proxy_header_addr_ip6_part) == PP2_ADDR_LEN_INET6,
 	"proxy_header_addr_ip6_part size is not equal to PP2_ADDR_LEN_INET6");
