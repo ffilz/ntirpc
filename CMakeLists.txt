@@ -1,8 +1,9 @@
 # New TI-RPC  Cmake
 
-# Current version as of Fedora 16.  Not tested with earlier.
+# Current version as of Fedora 25.  Not tested with earlier.
+#  cmake 4.x wants 3.6 or better.
 
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.6.2)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
