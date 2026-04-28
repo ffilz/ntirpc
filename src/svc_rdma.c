@@ -99,7 +99,7 @@ svc_rdma_rendezvous(SVCXPRT *xprt)
 	    SOCK_NAME_MAX);
 	rdma_xprt->sm_dr.xprt.xp_port = svc_get_port(ss);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s:%u local %p remote %p xprt %p remote ip %s",
 		__func__, __LINE__,
 		&rdma_xprt->sm_dr.xprt.xp_local.nb,
@@ -317,7 +317,7 @@ svc_rdma_unlink(SVCXPRT *xprt, u_int flags, const char *tag, const int line)
 
 	svc_rqst_xprt_unregister_rdma(xprt, flags);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 	    "%s() %p[%u]",
 	    __func__, rdma_xprt, rdma_xprt->state);
 
@@ -341,7 +341,7 @@ svc_rdma_destroy(SVCXPRT *xprt, u_int flags, const char *tag, const int line)
 {
 	RDMAXPRT *rdma_xprt = RDMA_DR(REC_XPRT(xprt));
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s() %p xp_refcnt %" PRId32
 		" should actually destroy things @ %s:%d",
 		__func__, xprt, xprt->xp_refcnt, tag, line);

@@ -979,7 +979,7 @@ static enum haproxy_ret_code handle_haproxy_header_local_cmd(
 	SVCXPRT *xprt, struct proxy_header_part *proxy_header_part)
 {
 	enum haproxy_ret_code ret;
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s: %p fd %d proxy ignored for local. len ignored: %d",
 		__func__, xprt, xprt->xp_fd, proxy_header_part->len);
 	const enum haproxy_ret_code ignore_remaining_data_result =
