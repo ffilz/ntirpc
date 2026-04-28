@@ -359,6 +359,33 @@ xdr_rdma_wrap_callback(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 
 	atomic_dec_uint32_t(&rdma_xprt->active_requests);
 
+	if ((enum xprt_stat)ret == XPRT_SUSPEND) {
+		/*
+		 * The request was suspended mid-compound
+		 * e.g. QOS BW throttle, async IO backend.
+		 * No RDMA WRITE/SEND operations have been posted
+		 * yet, so cbc->refcnt is still 1 (sentinel only).  Releasing
+		 * the sentinel here would drop refcnt to 0, which triggers
+		 * xdr_rdma_ioq_release(&cbc->dataq), zeroing dataq.qcount and
+		 * returning data_chunk_uv to the pool while the suspended
+		 * request still holds a pointer to it.  The subsequent
+		 * xdr_rdma_svc_flushout call would then hit:
+		 *   assert(dataq.qcount > 0)  fires with qcount == 0
+		 *
+		 * Fix: mark FLAG_RELEASE (so cleanup fires when refs eventually
+		 * reach 0) but defer the sentinel cbc_release_it to
+		 * xdr_rdma_svc_flushout, which is called after RDMA operations
+		 * are posted on the resume path and their refs keep the cbc
+		 * alive.
+		 */
+		__warnx(TIRPC_DEBUG_FLAG_XDR,
+			"%s rdma_xprt %p cbc %p suspended, deferring "
+			"sentinel release to flushout",
+			__func__, rdma_xprt, cbc);
+		cbc->cbc_flags = CBC_FLAG_RELEASE | CBC_FLAG_SENTINEL_PENDING;
+		return ret;
+	}
+
 err:
 	cbc->cbc_flags = CBC_FLAG_RELEASE;
 
@@ -2448,6 +2475,26 @@ xdr_rdma_svc_flushout(struct rpc_rdma_cbc *cbc, bool rdma_buf_used)
 	/* Release uio for read/readdir */
 	if (uio_refer) {
 		uio_refer->uio_release(uio_refer, UIO_FLAG_NONE);
+	}
+
+	/*
+	 * Release the deferred sentinel ref when the request was suspended
+	 * by wrap_callback (e.g. QOS, async IO). In that path CBC_FLAG_RELEASE
+	 * was set but cbc_release_it was intentionally skipped to keep
+	 * cbc->dataq alive.  Now that all RDMA operations have been posted
+	 * (taking their own refs), it is safe to drop the sentinel.  The
+	 * last RDMA completion will then see refcnt==0 with CBC_FLAG_RELEASE
+	 * set and trigger the normal cbc cleanup.
+	 *
+	 * For the normal (non-suspended) path CBC_FLAG_SENTINEL_PENDING is
+	 * never set, so this is a no-op.
+	 */
+	if (cbc->cbc_flags & CBC_FLAG_SENTINEL_PENDING) {
+		cbc->cbc_flags &= ~CBC_FLAG_SENTINEL_PENDING;
+		__warnx(TIRPC_DEBUG_FLAG_XDR,
+			"%s rdma_xprt %p cbc %p releasing deferred sentinel",
+			__func__, rdma_xprt, cbc);
+		cbc_release_it(cbc);
 	}
 
 	__warnx(TIRPC_DEBUG_FLAG_XDR, "%s: cbc %p recvq %p %d sendq %p %d rdma_xprt %p",
