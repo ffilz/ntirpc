@@ -74,6 +74,7 @@
 #include <rpc/svc_auth.h>
 #include <rpc/svc_rqst.h>
 #include <rpc/xdr_ioq.h>
+#include <arpa/inet.h>
 
 #include "rpc_com.h"
 #include "clnt_internal.h"
@@ -438,6 +439,7 @@ svc_vc_rendezvous(SVCXPRT *xprt)
 	socklen_t len;
 	static int n = 1;
 	struct timeval timeval;
+	struct sockaddr *sa;
 
 	XPRT_AUTO_TRACEPOINT(xprt, rendezvous_start, TRACE_INFO,
 		"rendezvous_start");
@@ -504,6 +506,28 @@ svc_vc_rendezvous(SVCXPRT *xprt)
 	memcpy(newxprt->xp_remote.nb.buf, &addr, len);
 	newxprt->xp_remote.nb.len = len;
 	XPRT_TRACE(newxprt, __func__, __func__, __LINE__);
+
+	sa = (struct sockaddr *)newxprt->xp_remote.nb.buf;
+	/* Store client information (IP & Port) in SVCXPRT */
+	if (newxprt->xp_remote.nb.len > 0 && sa != NULL) {
+		if (sa->sa_family == AF_INET) {
+			struct sockaddr_in *sin = (struct sockaddr_in *)sa;
+			inet_ntop(AF_INET, &sin->sin_addr, newxprt->xp_clnt_addr,
+					sizeof(newxprt->xp_clnt_addr));
+			newxprt->xp_clnt_port = ntohs(sin->sin_port);
+		} else if (sa->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sa;
+			inet_ntop(AF_INET6, &sin6->sin6_addr, newxprt->xp_clnt_addr,
+					sizeof(newxprt->xp_clnt_addr));
+			newxprt->xp_clnt_port = ntohs(sin6->sin6_port);
+		} else {
+			snprintf(newxprt->xp_clnt_addr, sizeof(newxprt->xp_clnt_addr), "unknown");
+			newxprt->xp_clnt_port = 0;
+		}
+	} else {
+		snprintf(newxprt->xp_clnt_addr, sizeof(newxprt->xp_clnt_addr), "no_addr");
+		newxprt->xp_clnt_port = 0;
+	}
 
 	/* XXX fvdl - is this useful? (Yes.  Matt) */
 	if (si.si_proto == IPPROTO_TCP) {
@@ -1205,9 +1229,9 @@ again:
 						xprt,
 						SVC_XPRT_FLAG_ADDED_RECV))) {
 					__warnx(TIRPC_DEBUG_FLAG_ERROR,
-						"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
+						"%s: %p fd %d svc_rqst_rearm_events failed (will set dead) - clientip: %s:%u",
 						"svc_vc_wait",
-						xprt, xprt->xp_fd);
+						xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 					SVC_DESTROY(xprt);
 					code = EINVAL;
 				}
@@ -1216,8 +1240,8 @@ again:
 				return SVC_STAT(xprt);
 			}
 			__warnx(TIRPC_DEBUG_FLAG_WARN,
-				"%s: %p fd %d recv errno %d (will set dead)",
-				"svc_vc_wait", xprt, xprt->xp_fd, code);
+				"%s: %p fd %d recv errno %d (will set dead) - clientip: %s:%u",
+				"svc_vc_wait", xprt, xprt->xp_fd, code, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			SVC_DESTROY(xprt);
 
 			XPRT_AUTO_TRACEPOINT(xprt, recv_err,
@@ -1227,8 +1251,8 @@ again:
 
 		if (unlikely(!rlen)) {
 			__warnx(TIRPC_DEBUG_FLAG_SVC_VC,
-				"%s: %p fd %d recv closed (will set dead)",
-				"svc_vc_wait", xprt, xprt->xp_fd);
+				"%s: %p fd %d recv closed (will set dead) - clientip: %s:%u",
+				"svc_vc_wait", xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			SVC_DESTROY(xprt);
 
 			XPRT_AUTO_TRACEPOINT(xprt, recv_empty,
@@ -1276,8 +1300,8 @@ again:
 
 		if (unlikely(!xd->sx_fbtbc)) {
 			__warnx(TIRPC_DEBUG_FLAG_ERROR,
-				"%s: %p fd %d fragment is zero (will set dead)",
-				__func__, xprt, xprt->xp_fd);
+				"%s: %p fd %d fragment is zero (will set dead) - clientip: %s:%u",
+				__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			SVC_DESTROY(xprt);
 
 			XPRT_AUTO_TRACEPOINT(xprt, recv_no_record,
@@ -1303,14 +1327,14 @@ again:
 
 		if (code == EAGAIN || code == EWOULDBLOCK) {
 			__warnx(TIRPC_DEBUG_FLAG_SVC_VC,
-				"%s: %p fd %d recv errno %d (try again)",
-				__func__, xprt, xprt->xp_fd, code);
+				"%s: %p fd %d recv errno %d (try again) - clientip: %s:%u",
+				__func__, xprt, xprt->xp_fd, code, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			if (unlikely(svc_rqst_rearm_events(
 						xprt,
 						SVC_XPRT_FLAG_ADDED_RECV))) {
 				__warnx(TIRPC_DEBUG_FLAG_ERROR,
-					"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
-					__func__, xprt, xprt->xp_fd);
+					"%s: %p fd %d svc_rqst_rearm_events failed (will set dead) - clientip: %s:%u",
+					__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 				SVC_DESTROY(xprt);
 				code = EINVAL;
 			}
@@ -1321,8 +1345,8 @@ again:
 			return SVC_STAT(xprt);
 		}
 		__warnx(TIRPC_DEBUG_FLAG_ERROR,
-			"%s: %p fd %d recv errno %d (will set dead)",
-			__func__, xprt, xprt->xp_fd, code);
+			"%s: %p fd %d recv errno %d (will set dead) - clientip: %s:%u",
+			__func__, xprt, xprt->xp_fd, code, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 		SVC_DESTROY(xprt);
 
 		XPRT_AUTO_TRACEPOINT(xprt, recv_error,
@@ -1333,8 +1357,8 @@ again:
 
 	if (unlikely(!rlen)) {
 		__warnx(TIRPC_DEBUG_FLAG_SVC_VC,
-			"%s: %p fd %d recv closed (will set dead)",
-			__func__, xprt, xprt->xp_fd);
+			"%s: %p fd %d recv closed (will set dead) - clientip: %s:%u",
+			__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 		SVC_DESTROY(xprt);
 
 		XPRT_AUTO_TRACEPOINT(xprt, recv_closed,
@@ -1358,8 +1382,8 @@ again:
 		if (unlikely(svc_rqst_rearm_events(xprt,
 						   SVC_XPRT_FLAG_ADDED_RECV))) {
 			__warnx(TIRPC_DEBUG_FLAG_ERROR,
-				"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
-				__func__, xprt, xprt->xp_fd);
+				"%s: %p fd %d svc_rqst_rearm_events failed (will set dead) - clientip: %s:%u",
+				__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			XPRT_UNIQUE_AUTO_TRACEPOINT(xprt, rearm_failed,
 				TRACE_ERR, "Rearm failed");
 			SVC_DESTROY(xprt);
@@ -1385,8 +1409,8 @@ again:
 
 	if (unlikely(svc_rqst_rearm_events(xprt, SVC_XPRT_FLAG_ADDED_RECV))) {
 		__warnx(TIRPC_DEBUG_FLAG_ERROR,
-			"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
-			__func__, xprt, xprt->xp_fd);
+			"%s: %p fd %d svc_rqst_rearm_events failed (will set dead) - clientip: %s:%u",
+			__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 		xdr_ioq_destroy(xioq, xioq->ioq_s.qsize);
 		SVC_DESTROY(xprt);
 

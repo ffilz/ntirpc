@@ -333,6 +333,10 @@ struct svc_xprt {
 		struct in6_pktinfo in6;
 #endif
 	} xp_pktinfo;
+
+	/* Client details - IP Address & Port */
+	char xp_clnt_addr[INET6_ADDRSTRLEN];
+	uint16_t xp_clnt_port;
 };
 
 #define XPRT_FMT "xprt: [ptr = {},flags = {},fd = {},type = {},refcnt = {}]"
