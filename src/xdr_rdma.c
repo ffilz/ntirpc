@@ -2004,16 +2004,35 @@ xdr_rdma_svc_reply(struct rpc_rdma_cbc *cbc, u_int32_t xid,
 				IOQ_(have)->v.vio_wrap = (char *)IOQ_(have)->v.vio_base
 					+ rdma_xprt->sm_dr.send_hdr_sz;
 			} else {
-				/* For reply_list we copy from protocol buffer so allocate bigger
-				 * chunk */
-				assert(l <= rdma_xprt->sm_dr.sendsz);
+				/* For reply_list we copy from protocol buffer so allocate
+				 * bigger chunk.
+				 *
+				 * The client's reply chunk length (l) can legally exceed
+				 * sendsz: the client pre-registers a buffer of maxcount +
+				 * NFS COMPOUND overhead (a few hundred bytes), and when
+				 * maxcount == sendsz (= RDMA_DATA_CHUNK_SZ = 1 MiB) the
+				 * total l > sendsz.
+				 *
+				 * vio_wrap is set to min(l, sendsz):
+				 * l < sendsz: honour the client's actual chunk capacity.
+				 * l >= sendsz: cap at the physical buffer size to prevent
+				 * a server-side buffer overflow (the overflow data is
+				 * only NFS header bytes, far less than sendsz).
+				 *
+				 * The RDMA WRITE size is derived from ioquv_length() =
+				 * vio_tail - vio_head (actual bytes written by XDR), never
+				 * from l, so the transfer stays within both the server buffer
+				 * and the client's pre-registered region.
+				 */
 				have = xdr_rdma_ioq_uv_fetch(&cbc->sendq, &rdma_xprt->outbufs_data.uvqh,
 				    "sreply buffer", 1, IOQ_FLAG_NONE);
 
-				/* buffer is limited size */
+				/* buffer is limited to min(l, sendsz) */
 				IOQ_(have)->v.vio_head =
 				IOQ_(have)->v.vio_tail = IOQ_(have)->v.vio_base;
-				IOQ_(have)->v.vio_wrap = (char *)IOQ_(have)->v.vio_base + l;
+				IOQ_(have)->v.vio_wrap = (char *)IOQ_(have)->v.vio_base
+                                   + (l < rdma_xprt->sm_dr.sendsz
+                                      ? l : rdma_xprt->sm_dr.sendsz);
 			}
 		}
 		if (!allocate_header)
@@ -2356,8 +2375,13 @@ xdr_rdma_svc_flushout(struct rpc_rdma_cbc *cbc, bool rdma_buf_used)
 			uint32_t length = ntohl(c_seg->length);
 			uint32_t nfs_header_len = ioquv_length(nfs_header_uv);
 
-			assert(length <= rdma_xprt->sm_dr.sendsz);
-
+			/* Do not assert, if length > sendsz: the client can legitimately
+			 * pre-register a reply chunk larger than sendsz (e.g. when
+			 * maxcount equals sendsz the total chunk includes NFS COMPOUND
+			 * overhead pushing l above sendsz). The actual RDMA WRITE size
+			 * is write_len = min(rdma_buf_len, length) <= sendsz, so the
+			 * transfer is always within the server's registered buffer.
+			 */
 			*w_seg = *c_seg;
 
 			__warnx(TIRPC_DEBUG_FLAG_XDR,
