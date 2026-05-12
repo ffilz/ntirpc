@@ -74,7 +74,7 @@ svc_rdma_rendezvous(SVCXPRT *xprt)
 					           __svc_params->idle_timeout);
 
 	if (!rdma_xprt) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		return (XPRT_DIED);
@@ -135,7 +135,7 @@ svc_rdma_rendezvous(SVCXPRT *xprt)
 
 	int retval = xprt->xp_dispatch.rendezvous_cb(&rdma_xprt->sm_dr.xprt);
 	if (retval) {
-		__warnx(TIRPC_DEBUG_FLAG_WARN,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_WARN,
 			"%s:%u ERROR (return %d)",
 			__func__, __LINE__, retval);
 		SVC_DESTROY(&rdma_xprt->sm_dr.xprt);
@@ -148,7 +148,7 @@ svc_rdma_rendezvous(SVCXPRT *xprt)
 	rdma_xprt->sm_dr.xprt.xp_fd = rdma_xprt->event_channel->fd;
 
 	if (svc_rdma_add_xprt_fd(&rdma_xprt->sm_dr.xprt)) {
-		__warnx(TIRPC_DEBUG_FLAG_WARN,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_WARN,
 			"%s:%u svc_rdma_add_xprt failed (xprt %p)",
 			__func__, __LINE__, &rdma_xprt->sm_dr.xprt);
 		SVC_DESTROY(&rdma_xprt->sm_dr.xprt);
@@ -158,7 +158,7 @@ svc_rdma_rendezvous(SVCXPRT *xprt)
 	atomic_set_uint16_t_bits(&rdma_xprt->sm_dr.xprt.xp_flags,
 	    SVC_XPRT_FLAG_READY);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s:%u New RDMA client connected xprt %p, xp_fd %d, "
 		"qp_num %d, xp_fd %d is_rdma_enabled %d to local port %d "
 		"from remote port %d ref %d epoll %#04x remote ip %s",
@@ -206,7 +206,7 @@ svc_rdma_decode(struct svc_req *req)
 		__func__, req->rq_xprt, req, cbc, xdrs);
 
 	if (!xdr_rdma_svc_recv(cbc, 0)){
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s: xdr_rdma_svc_recv failed",
 			__func__);
 		return (XPRT_DIED);
@@ -222,7 +222,7 @@ svc_rdma_decode(struct svc_req *req)
 	rpc_msg_init(&req->rq_msg);
 
 	if (!xdr_dplx_decode(xdrs, &req->rq_msg)) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s: xdr_dplx_decode failed",
 			__func__);
 		return (XPRT_DIED);
@@ -240,7 +240,7 @@ svc_rdma_decode(struct svc_req *req)
 		return XPRT_IDLE;
 	}
 
-	__warnx(TIRPC_DEBUG_FLAG_WARN,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_WARN,
 		"%s: %p fd %d failed direction %" PRIu32
 		" (will set dead)",
 		__func__, req->rq_xprt, req->rq_xprt->xp_fd,
@@ -273,7 +273,7 @@ svc_rdma_reply(struct svc_req *req)
 	xdrs = cbc->sendq.xdrs;
 
 	if (!xdr_rdma_svc_reply(cbc, 0, req->data_chunk_length ? 1 : 0)){
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s: xdr_rdma_svc_reply failed (will set dead)",
 			__func__);
 		return (XPRT_DIED);
@@ -282,7 +282,7 @@ svc_rdma_reply(struct svc_req *req)
 	xdrs->x_op = XDR_ENCODE;
 
 	if (!xdr_reply_encode(xdrs, &req->rq_msg)) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s: xdr_reply_encode failed (will set dead)",
 			__func__);
 		return (XPRT_DIED);
@@ -293,7 +293,7 @@ svc_rdma_reply(struct svc_req *req)
 	 && req->rq_msg.rm_reply.rp_acpt.ar_stat == SUCCESS
 	 && req->rq_auth
 	 && !SVCAUTH_WRAP(req, xdrs)) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s: SVCAUTH_WRAP failed (will set dead)",
 			__func__);
 		return (XPRT_DIED);
@@ -301,7 +301,7 @@ svc_rdma_reply(struct svc_req *req)
 	xdr_tail_update(xdrs);
 
 	if (!xdr_rdma_svc_flushout(cbc, req->data_chunk_length ? 1 : 0)){
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s: flushout failed (will set dead)",
 			__func__);
 		return (XPRT_DIED);
@@ -329,7 +329,7 @@ svc_rdma_unlink(SVCXPRT *xprt, u_int flags, const char *tag, const int line)
 		attr.qp_state = IBV_QPS_RESET;
 
 		if (ibv_modify_qp(rdma_xprt->qp, &attr, IBV_QP_STATE)) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			    "%s() modify_qp failed rdma_xprt %p",
 			    __func__, rdma_xprt);
 		}
