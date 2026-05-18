@@ -252,7 +252,7 @@ clnt_tp_ncreate_timed(const char *hostname, rpcprog_t prog,
 	CLIENT *cl = NULL;	/* client handle */
 
 	if (nconf == NULL) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: %s",
+		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: %s nconf is NULL",
 			__func__, clnt_sperrno(RPC_TLIERROR));
 		cl = clnt_raw_ncreate(prog, vers);
 		cl->cl_error.re_status = RPC_TLIERROR;
@@ -319,7 +319,7 @@ clnt_tli_ncreate_opt(int fd, const struct netconfig *nconf,
 
 	if (fd == RPC_ANYFD) {
 		if (nconf == NULL) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: %s",
+			__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: %s nconf is NULL",
 				__func__, clnt_sperrno(RPC_TLIERROR));
 			cl = clnt_raw_ncreate(prog, vers);
 			cl->cl_error.re_status = RPC_TLIERROR;
@@ -344,7 +344,8 @@ clnt_tli_ncreate_opt(int fd, const struct netconfig *nconf,
 			addr = (struct sockaddr *)bindaddr->buf;
 
 			if (si.si_af != addr->sa_family) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: %s",
+				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+					"%s: %s address family mismatch",
 					__func__,
 					clnt_sperrno(RPC_TLIERROR));
 				cl = clnt_raw_ncreate(prog, vers);
