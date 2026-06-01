@@ -378,7 +378,7 @@ svc_reg(SVCXPRT *xprt, const rpcprog_t prog, const rpcvers_t vers,
  rpcb_it:
 	rwlock_unlock(&svc_lock);
 	/* now register the information with the local binder service */
-	if (nconf) {
+	if (nconf && ((xprt->xp_flags & SVC_XPRT_FLAG_NO_SET) == 0)) {
 		/*LINTED const castaway */
 		dummy =
 		    rpcb_set(prog, vers, (struct netconfig *)nconf,

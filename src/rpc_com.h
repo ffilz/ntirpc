@@ -54,8 +54,13 @@
 #define RPC_MAXADDRSIZE 1024
 
 #ifndef __RPC_GETXID
+#ifdef __RPC_GETXID_LEGACY
 #define __RPC_GETXID(now) ((u_int32_t)getpid() ^ (u_int32_t)(now)->tv_sec ^ \
 			   (u_int32_t)((now)->tv_nsec))
+#else
+#include <stdlib.h>
+#define __RPC_GETXID(now) ((u_int32_t)random())
+#endif
 #endif				/* !__RPC_GETXID */
 
 __BEGIN_DECLS

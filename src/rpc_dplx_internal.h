@@ -34,6 +34,7 @@
 #include <rpc/xdr_ioq.h>
 #include <rpc/pool_queue.h>
 #include <rpc/haproxy.h>
+#include "rpc_com.h"
 
 /* Svc event strategy */
 enum svc_event_type {
@@ -133,6 +134,7 @@ rpc_dplx_rec_init(struct rpc_dplx_rec *rec)
 	(void)clock_gettime(CLOCK_MONOTONIC_FAST, &(rec->recv.ts));
 
 	rec->xprt.xp_refcnt = 1;
+	rec->call_xid = __RPC_GETXID(&(rec->recv.ts));
 
 	// Init TLV headers, network id values in case they are not set later on
 	rec->xprt.proxy_protocol_tlv_headers.tlv_count = 0;
