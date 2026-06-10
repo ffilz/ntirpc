@@ -508,10 +508,12 @@ extern CLIENT *clnt_vc_ncreatef(const int, const struct netbuf *,
 				const rpcprog_t, const rpcvers_t,
 				const u_int, const u_int, const uint32_t);
 
+#ifdef USE_RPC_RDMA
 CLIENT *
 clnt_rdma_create(int fd, char *host, int port, int recv_sz,
     int send_sz, int page_sz, const rpcprog_t prog,
     const rpcvers_t vers, const uint32_t flags);
+#endif
 
 static inline CLIENT *
 clnt_vc_ncreate(const int fd, const struct netbuf *raddr,
@@ -528,8 +530,10 @@ clnt_vc_ncreate(const int fd, const struct netbuf *raddr,
 extern CLIENT *clnt_vc_ncreate_svc(const SVCXPRT *, const rpcprog_t,
 				   const rpcvers_t, const uint32_t);
 
+#if defined(_USE_NFS_RDMA) || defined(USE_RPC_RDMA)
 extern CLIENT *clnt_rdma_ncreatef(const SVCXPRT *, const rpcprog_t,
 				  const rpcvers_t, const uint32_t, bool);
+#endif
 /*
  *      const SVCXPRT *xprt;                    -- active service xprt
  *      const rpcprog_t prog;                   -- RPC program number
