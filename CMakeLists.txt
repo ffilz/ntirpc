@@ -354,6 +354,8 @@ add_custom_target( srpm
 endif (NOT TARGET rpm)
 ########### install files ###############
 
+
 install(FILES  ${PROJECT_BINARY_DIR}/libntirpc.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 install(DIRECTORY  ${NTIRPC_BASE_DIR}/ntirpc DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(FILES  ${PROJECT_BINARY_DIR}/ntirpc/version.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ntirpc)
+install(FILES  ${PROJECT_BINARY_DIR}/config.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ntirpc)
