@@ -36,6 +36,7 @@ NTIRPC_${NTIRPC_VERSION_BASE} {
     _svcauth_none;
     _svcauth_short;
     _svcauth_unix;
+    _svcauth_tls;
 
     # a*
     authgss_ncreate;
@@ -66,6 +67,7 @@ NTIRPC_${NTIRPC_VERSION_BASE} {
     clnt_req_wait_reply;
     clnt_sperrno;
     clnt_tli_create;
+    clnt_tli_ncreate_opt;
     clnt_tp_ncreate_timed;
     clnt_vc_get_client_xprt;
     clnt_vc_ncreatef;
@@ -175,6 +177,8 @@ NTIRPC_${NTIRPC_VERSION_BASE} {
     # t*
     taddr2uaddr;
     tirpc_control;
+    tls_cleanup;
+    tls_init;
 
     # u*
     uaddr2taddr;
@@ -229,6 +233,10 @@ NTIRPC_${NTIRPC_VERSION_BASE} {
     xdr_wrapstring;
     xdrmem_ncreate;
     xdrstdio_create;
+    xprt_tls_init;
+    xp_tls_recv_impl;
+    xp_tls_send_impl;
+    xp_tls_close_impl;
 
   local:
     *;

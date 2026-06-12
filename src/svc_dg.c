@@ -319,6 +319,8 @@ again:
 
 	SVC_REF(xprt, SVC_REF_FLAG_NONE);
 	newxprt->xp_parent = xprt;
+	if (xprt->xp_netid)
+		newxprt->xp_netid = mem_strdup(xprt->xp_netid);
 
 	atomic_set_uint16_t_bits(&newxprt->xp_flags,
 		SVC_XPRT_FLAG_READY);

@@ -1,6 +1,6 @@
 prefix=@CMAKE_INSTALL_PREFIX@
 exec_prefix=${prefix}
-libdir=${prefix}/@LIB_INSTALL_DIR@
+libdir=${prefix}/@CMAKE_INSTALL_LIBDIR@
 includedir=${prefix}/include/ntirpc
 
 Name: libntirpc

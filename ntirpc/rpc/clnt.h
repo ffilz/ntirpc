@@ -458,9 +458,27 @@ clnt_tp_ncreate(const char *hostname, const rpcprog_t prog,
  * Generic TLI create routine. Only provided for compatibility.
  */
 
-extern CLIENT *clnt_tli_ncreate(const int, const struct netconfig *,
-				struct netbuf *, const rpcprog_t,
-				const rpcvers_t, const u_int, const u_int);
+extern CLIENT *clnt_tli_ncreate_opt(const int, const struct netconfig *,
+				    struct netbuf *, struct netbuf *,
+				    const rpcprog_t, const rpcvers_t,
+				    const u_int, const u_int, int);
+
+static inline CLIENT *
+clnt_tli_ncreate(int fd, const struct netconfig *nconf,
+		 struct netbuf *bindaddr, struct netbuf *svcaddr,
+		 rpcprog_t prog, rpcvers_t vers,
+		 u_int sendsz, u_int recvsz)
+{
+#ifdef SOL_IPV6
+	int opts = IPV6_V6ONLY;
+#else
+	int opts = 0;
+#endif
+
+	return clnt_tli_ncreate_opt(fd, nconf, bindaddr, svcaddr, prog, vers,
+				    sendsz, recvsz, opts);
+}
+
 /*
  * const register int fd;  -- fd
  * const struct netconfig *nconf; -- netconfig structure
@@ -490,10 +508,12 @@ extern CLIENT *clnt_vc_ncreatef(const int, const struct netbuf *,
 				const rpcprog_t, const rpcvers_t,
 				const u_int, const u_int, const uint32_t);
 
+#ifdef USE_RPC_RDMA
 CLIENT *
 clnt_rdma_create(int fd, char *host, int port, int recv_sz,
     int send_sz, int page_sz, const rpcprog_t prog,
     const rpcvers_t vers, const uint32_t flags);
+#endif
 
 static inline CLIENT *
 clnt_vc_ncreate(const int fd, const struct netbuf *raddr,
@@ -510,8 +530,10 @@ clnt_vc_ncreate(const int fd, const struct netbuf *raddr,
 extern CLIENT *clnt_vc_ncreate_svc(const SVCXPRT *, const rpcprog_t,
 				   const rpcvers_t, const uint32_t);
 
+#if defined(_USE_NFS_RDMA) || defined(USE_RPC_RDMA)
 extern CLIENT *clnt_rdma_ncreatef(const SVCXPRT *, const rpcprog_t,
 				  const rpcvers_t, const uint32_t, bool);
+#endif
 /*
  *      const SVCXPRT *xprt;                    -- active service xprt
  *      const rpcprog_t prog;                   -- RPC program number

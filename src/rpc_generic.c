@@ -689,7 +689,7 @@ __rpc_nconf2sockinfo(const struct netconfig *nconf,
 }
 
 int
-__rpc_nconf2fd_flags(const struct netconfig *nconf, int flags)
+__rpc_nconf2fd_flags_opt(const struct netconfig *nconf, int flags, int opt)
 {
 	struct __rpc_sockinfo si;
 	int fd;
@@ -701,19 +701,15 @@ __rpc_nconf2fd_flags(const struct netconfig *nconf, int flags)
 	if ((fd >= 0) &&
 	    (si.si_af == AF_INET6)) {
 #ifdef SOL_IPV6
-		int val = 1;
-		(void) setsockopt(fd, SOL_IPV6, IPV6_V6ONLY, &val,
-				  sizeof(val));
+		if ((opt & IPV6_V6ONLY) != 0) {
+			int val = 1;
+			(void) setsockopt(fd, SOL_IPV6, IPV6_V6ONLY, &val,
+					  sizeof(val));
+		}
 #endif
 	}
 
 	return fd;
-}
-
-int
-__rpc_nconf2fd(const struct netconfig *nconf)
-{
-	return __rpc_nconf2fd_flags(nconf, 0);
 }
 
 int

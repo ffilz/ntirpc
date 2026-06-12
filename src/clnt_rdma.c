@@ -133,7 +133,7 @@ clnt_rdma_ncreatef(const SVCXPRT *xprt,		/* init but NOT connect()ed */
 		memcpy(rdma_xprt->sm_dr.xprt.xp_ip, xprt->xp_ip, SOCK_NAME_MAX);
 		rdma_xprt->sm_dr.xprt.xp_port = xprt->xp_port;
 
-		__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s: create rdma clnt ip %s port %d",
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s: create rdma clnt ip %s port %d",
 			__func__, rdma_xprt->sm_dr.xprt.xp_ip, rdma_xprt->sm_dr.xprt.xp_port);
 
 		/* RDMAX_CLIENT indicate is client connection from

@@ -37,18 +37,7 @@ set( PACKNAME "${NTIRPC_VERSION}" )
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-# Install destination, if built standalone
-get_property(USE_LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-if (USE_LIB64)
-	set(LIB_INSTALL_DIR lib64 CACHE PATH
-		"Specify name of libdir inside install path")
-else (USE_LIB64)
-	set(LIB_INSTALL_DIR lib CACHE PATH
-		"Specify name of libdir inside install path")
-endif (USE_LIB64)
-
-set(SYSTEM_LIBRARIES ${SYSTEM_LIBRARIES})
-set(BINARY_LIBRARIES ${BINARY_LIBRARIES})
+include(GNUInstallDirs)
 
 include(GetGitRevisionDescription)
 get_git_head_revision(GIT_REFSPEC _GIT_HEAD_COMMIT)
@@ -79,6 +68,38 @@ if (USE_GSS)
 endif (USE_GSS)
 
 option(USE_MONITORING "Enable monitoring stack" ON)
+option(USE_TLS "Enable TLS support" OFF)
+option(USE_OPENSSL "Use OpenSSL as TLS backend" OFF)
+option(USE_GNUTLS "Use GNUTLS as TLS backend" OFF)
+# Find TLS libraries based on configuration
+if(USE_TLS)
+  set(TLS_COMPONENTS "")
+
+  if(USE_OPENSSL)
+    list(APPEND TLS_COMPONENTS "openssl")
+    set(USE_GNUTLS OFF)
+  endif(USE_OPENSSL)
+
+  if(USE_GNUTLS)
+    list(APPEND TLS_COMPONENTS "gnutls")
+    set(USE_OPENSSL OFF)
+  endif(USE_GNUTLS)
+
+  if( NOT USE_OPENSSL AND NOT USE_GNUTLS)
+    list(APPEND TLS_COMPONENTS "openssl")
+    list(APPEND TLS_COMPONENTS "gnutls")
+  endif()
+
+  find_package(TLS REQUIRED ${TLS_COMPONENTS})
+
+  # Add TLS libraries to system libraries
+  if (TLS_FOUND)
+    set(SYSTEM_LIBRARIES ${TLS_LIBRARIES} ${SYSTEM_LIBRARIES})
+    include_directories(${TLS_INCLUDE_DIRS})
+  else (TLS_FOUND)
+    set(USE_TLS OFF)
+  endif(TLS_FOUND)
+endif(USE_TLS)
 
 option(PROXY_PROTOCOL_PARSE_COMMON_NETWORK_ID "Enable parsing of common network id from haproxy TLV" OFF)
 
@@ -259,6 +280,9 @@ message(STATUS "USE_PROFILE = ${USE_PROFILE}")
 message(STATUS "USE_LTTNG_NTIRPC = ${USE_LTTNG_NTIRPC}")
 message(STATUS "USE_MONITORING = ${USE_MONITORING}")
 message(STATUS "PROXY_PROTOCOL_PARSE_COMMON_NETWORK_ID = ${PROXY_PROTOCOL_PARSE_COMMON_NETWORK_ID}")
+message(STATUS "NTIRPC USE_TLS = ${USE_TLS}")
+message(STATUS "NTIRPC USE_OPENSSL = ${USE_OPENSSL}")
+message(STATUS "NTIRPC USE_GNUTLS = ${USE_GNUTLS}")
 
 #force command line options to be stored in cache
 set(_MSPAC_SUPPORT ${_MSPAC_SUPPORT}
@@ -330,7 +354,8 @@ add_custom_target( srpm
 endif (NOT TARGET rpm)
 ########### install files ###############
 
-install(FILES  ${PROJECT_BINARY_DIR}/libntirpc.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-install(DIRECTORY  ${NTIRPC_BASE_DIR}/ntirpc DESTINATION include)
-install(FILES  ${PROJECT_BINARY_DIR}/ntirpc/version.h DESTINATION include/ntirpc)
-install(FILES  ${PROJECT_BINARY_DIR}/config.h DESTINATION include/ntirpc)
+
+install(FILES  ${PROJECT_BINARY_DIR}/libntirpc.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+install(DIRECTORY  ${NTIRPC_BASE_DIR}/ntirpc DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+install(FILES  ${PROJECT_BINARY_DIR}/ntirpc/version.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ntirpc)
+install(FILES  ${PROJECT_BINARY_DIR}/config.h DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/ntirpc)

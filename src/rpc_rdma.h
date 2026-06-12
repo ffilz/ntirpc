@@ -87,6 +87,10 @@ typedef int (*rpc_rdma_callback_t)(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt
 #define CBC_FLAG_NONE		0x0000
 #define CBC_FLAG_RELEASE	0x0001
 #define CBC_FLAG_RELEASING	0x0002
+/* svc_request returned XPRT_SUSPEND (e.g. QOS, async request handling)
+ * wrap_callback deferred the sentinel cbc_release_it to xdr_rdma_svc_flushout
+ * so that dataq buffers remain valid across the suspension window. */
+#define CBC_FLAG_SENTINEL_PENDING 0x0004
 
 #define RDMA_CB_TIMEOUT_SEC 10
 

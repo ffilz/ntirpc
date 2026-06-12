@@ -22,7 +22,7 @@ set_target_properties(ntirpc_tracepoints PROPERTIES
   SOVERSION "${NTIRPC_MAJOR_VERSION}${NTIRPC_MINOR_VERSION}"
 )
 
-install(TARGETS ntirpc_tracepoints COMPONENT tracing DESTINATION ${LIB_INSTALL_DIR} )
+install(TARGETS ntirpc_tracepoints COMPONENT tracing DESTINATION ${CMAKE_INSTALL_LIBDIR} )
 
 add_library(ntirpc_lttng STATIC lttng_defines.c)
 #add_sanitizers(ntirpc_lttng)
