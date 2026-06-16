@@ -123,7 +123,7 @@ typedef enum vio_type {
 	VIO_DATA,               /* data buffer */
 	VIO_TRAILER_LEN,	/* length field for following TRAILER buffer */
 	VIO_TRAILER,            /* trailer buffer after data */
-} vio_type;
+} vio_type_t;
 
 /* XDR buffer vector descriptors */
 typedef struct xdr_vio {
@@ -133,7 +133,7 @@ typedef struct xdr_vio {
 	uint8_t *vio_wrap;	/* maximum vio_tail */
 	uint32_t vio_length;	/* length of buffer, used for vector
 				   pre-allocation */
-	vio_type vio_type;	/* type of buffer */   
+	vio_type_t vio_type;	/* type of buffer */   
 } xdr_vio;
 
 /* vio_wrap >= vio_tail >= vio_head >= vio_base */
@@ -162,7 +162,11 @@ typedef struct xdr_uio {
 				 * 0: not allocated */
 	u_int	uio_flags;
 	int32_t uio_references;
+#ifdef __cplusplus
+	xdr_vio uio_vio[1];
+#else
 	xdr_vio	uio_vio[0];	/* appended vectors */
+#endif
 } xdr_uio;
 
 /* Op flags */

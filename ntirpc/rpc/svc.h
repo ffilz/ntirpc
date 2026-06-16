@@ -180,6 +180,8 @@ typedef struct svc_init_params {
 #define SVC_XPRT_FLAG_REMOTE_ADDR_SET	0x0200	/* remote addr was final set */
 #define SVC_XPRT_FLAG_READY		0x0400	/* ready to use */
 #define SVC_XPRT_FLAG_IOQ_WRITING	0x0800	/* xprt is used by svc_ioq_write */
+#define SVC_XPRT_FLAG_NO_SET		0x1000  /* do not register with rpcbind */
+#define SVC_XPRT_FLAG_TLS_MORE_DATA_AVAILABLE 0x2000 /* TLS specific more data available on xprt to read */
 
 #define SVC_XPRT_FLAG_DESTROYED (SVC_XPRT_FLAG_DESTROYING \
 				| SVC_XPRT_FLAG_RELEASING)
@@ -229,6 +231,22 @@ struct svc_req;			/* forward decl. */
 
 typedef enum xprt_stat (*svc_req_fun_t) (struct svc_req *);
 
+#ifdef USE_TLS
+struct xp_tls {
+	void *tls_ctx;        /* TLS context */
+	pthread_mutex_t tls_lock;
+	/* If keyupdate needs to be supported based on connection time
+	 * i.e expire connection after 1hour */
+	time_t last_key_update_time;
+	volatile bool tls_enabled; /* Is TLS enabled for this transport */
+	bool tls_established; /* Is TLS handshake complete */
+	bool tls_pending; /* Used in AUTH_TLS handling */
+	bool mtls; /* type of TLS handshake, is mtls is true */
+	bool not_first_packet; /* Used for identifying TLS connection request
+				 which doesnt use AUTH_TLS */
+};
+#endif
+
 /**
  * Server side transport handle
  */
@@ -267,12 +285,20 @@ struct svc_xprt {
 		svc_xprt_fun_t xp_free_user_data;
 	} *xp_ops;
 
+#ifdef USE_TLS
+	struct xp_tls xp_tls;  /* TLS state */
+#endif
+
 	/* handle incoming connections (per xp_fd) */
 	union {
 		struct {
 			svc_req_fun_t process_cb;
 			svc_xprt_fun_t remote_addr_set_cb;
+#ifdef __cplusplus
+		}connection_dispatch_ops;
+#else
 		};
+#endif
 		svc_xprt_fun_t rendezvous_cb;
 	}  xp_dispatch;
 	SVCXPRT *xp_parent;
@@ -329,6 +355,10 @@ struct svc_xprt {
 		struct in6_pktinfo in6;
 #endif
 	} xp_pktinfo;
+
+	/* Client details - IP Address & Port */
+	char xp_clnt_addr[INET6_ADDRSTRLEN];
+	uint16_t xp_clnt_port;
 };
 
 #define XPRT_FMT "xprt: [ptr = {},flags = {},fd = {},type = {},refcnt = {}]"
@@ -449,6 +479,67 @@ __END_DECLS
  */
 #define SVC_RECV(xprt) \
 	(*(xprt)->xp_ops->xp_recv)(xprt)
+
+#ifdef USE_TLS
+
+ssize_t xp_tls_send_impl(SVCXPRT *xprt, const struct msghdr *msg, int flags);
+ssize_t xp_tls_recv_impl(SVCXPRT *xprt, void *buf, size_t len, int flags);
+ssize_t xp_tls_datapending_check(SVCXPRT *xprt);
+void xp_tls_recv_wait(SVCXPRT *xprt);
+void xp_tls_close_impl(SVCXPRT *xprt);
+bool is_handshake_msg(SVCXPRT *xprt);
+
+/*
+ * For stunnel:
+ * In svc_recv, code flow checks whether it is a client handshake message.
+ * If it is, the flow does not transfer to epoll_wait.
+ *
+ * For upperlayer protocol specific TLS handshake (eg :AUTH_TLS in NFS-Ganesha)
+ * The request is scheduled to process by the upper layer, and the flow moves on
+ * to wait for new events.
+ * The data available on socket event will be generated because handshake is in
+ * progress and data is handshake data. Therefore, we wait for the handshake to
+ * complete (either successfully or with failure) for the xprt before performing
+ * any actual read/write operations.
+ * Below locking is applicable only for such handshake (eg :AUTH_TLS in
+ * NFS-Ganesha) and not stunnel type connection.
+ *
+ * It can also be possible that handshake failed,
+ * till that time dont process the data.
+ */
+static inline ssize_t svc_tls_recv(SVCXPRT *xprt, void *address, size_t bytes,
+				   int flags)
+{
+	if (xprt->xp_tls.tls_enabled && !xprt->xp_tls.tls_established)
+		xp_tls_recv_wait(xprt);
+	if (xprt->xp_tls.tls_established)
+		return xp_tls_recv_impl(xprt, address, bytes, flags);
+	return recv(xprt->xp_fd, address, bytes, flags);
+}
+
+static inline ssize_t svc_tls_send(SVCXPRT *xprt, const struct msghdr *msg,
+				   int flags)
+{
+	if (xprt->xp_tls.tls_established)
+		return xp_tls_send_impl(xprt, msg, flags);
+	return sendmsg(xprt->xp_fd, msg, flags);
+}
+
+static inline void svc_tls_close(SVCXPRT *xprt)
+{
+	if (xprt->xp_tls.tls_established)
+		xp_tls_close_impl(xprt);
+}
+
+static inline ssize_t svc_tls_datapending(SVCXPRT *xprt)
+{
+	if (!xprt->xp_tls.tls_established)
+		return 0;
+	return xp_tls_datapending_check(xprt);
+}
+
+#endif /* USE_TLS */
+
 
 #define SVC_STAT(xprt) \
 	(*(xprt)->xp_ops->xp_stat)(xprt)
@@ -583,6 +674,10 @@ static inline void svc_destroy_it(SVCXPRT *xprt,
 	 * Also for UDP xprt, this is never set, needn't enter here */
 	if ((atomic_fetch_uint16_t(&xprt->xp_flags) & SVC_XPRT_FLAG_CLOSE)
 	    && xprt->xp_fd != RPC_ANYFD) {
+		/*  need to tell the client about TLS Connection closure */
+#ifdef USE_TLS
+		svc_tls_close(xprt);
+#endif
 		(void)shutdown(xprt->xp_fd, SHUT_RDWR);
 		if (xprt->xp_fd_send != RPC_ANYFD)
 			(void)shutdown(xprt->xp_fd_send, SHUT_RDWR);

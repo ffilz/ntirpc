@@ -32,6 +32,12 @@
 #define __S2(x) __S1(x)
 #define LINE_AS_STRING __S2(__LINE__)
 
+#ifndef UNUSED
+#define UNUSED_ATTR __attribute__((unused))
+#define UNUSED(...) UNUSED_(__VA_ARGS__)
+#define UNUSED_(arg) NOT_USED_##arg UNUSED_ATTR
+#endif
+
 #ifdef USE_LTTNG_NTIRPC
 
 #include "lttng_generator.h"
@@ -57,7 +63,7 @@
 
 /* We call the empty function with the variable args to avoid unused variables
  * warning when LTTNG traces are disabled */
-static void inline ntirpc_empty_function(const char* unused, ...) {}
+static void inline ntirpc_empty_function(const char* UNUSED(unused), ...) {}
 
 #define NTIRPC_AUTO_TRACEPOINT(prov_name, event_name, log_level, ...) \
 		ntirpc_empty_function("unused", ##__VA_ARGS__)

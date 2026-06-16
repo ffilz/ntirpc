@@ -165,13 +165,13 @@ rpc_rdma_pd_by_verbs(RDMAXPRT *rdma_xprt)
 	int rc;
 
 	if (!rdma_xprt->cm_id) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() transport missing cm_id",
 			__func__);
 		return EINVAL;
 	}
 	if (!rdma_xprt->cm_id->verbs) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() cm_id missing verbs",
 			__func__);
 		/* return EINVAL; legal value for dispatcher??? */
@@ -221,7 +221,7 @@ rpc_rdma_pd_get(RDMAXPRT *rdma_xprt)
 	int rc = rpc_rdma_pd_by_verbs(rdma_xprt);
 
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		return rc;
@@ -230,7 +230,7 @@ rpc_rdma_pd_get(RDMAXPRT *rdma_xprt)
 		rdma_xprt->pd->pd = ibv_alloc_pd(rdma_xprt->cm_id->verbs);
 		if (!rdma_xprt->pd->pd) {
 			rc = errno;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() %p[%u] ibv_alloc_pd failed: %s (%d)",
 				__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 			return rc;
@@ -248,7 +248,7 @@ static inline void
 rpc_rdma_pd_put(RDMAXPRT *rdma_xprt)
 {
 	if (!rdma_xprt->pd) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() missing protection domain?",
 			__func__);
 		return;
@@ -284,7 +284,7 @@ rpc_rdma_print_devinfo(RDMAXPRT *rdma_xprt)
 	struct ibv_device_attr device_attr;
 	ibv_query_device(rdma_xprt->cm_id->verbs, &device_attr);
 	uint64_t node_guid = be64toh(device_attr.node_guid);
-	__warnx(TIRPC_DEBUG_FLAG_EVENT, "Device Info:\n"
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "Device Info:\n"
 		"\tNode Guid:\t\t\t%04x:%04x:%04x:%04x\n"
 		"\tvendor_id:\t\t\t0x%04x\n"
 		"\tvendor_part_id:\t\t\t%d\n"
@@ -330,7 +330,7 @@ rdma_cleanup_cbcs(RDMAXPRT *rdma_xprt) {
 	int cleanup_count = 0;
 	struct poolq_head *ioqh = &rdma_xprt->cbclist;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s() before cleanup "
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s() before cleanup "
 	    "%p xp_refcnt %d active requests %d qcount %d",
 	    __func__, &rdma_xprt->sm_dr.xprt,
 	    rdma_xprt->sm_dr.xprt.xp_refcnt, rdma_xprt->active_requests,
@@ -377,7 +377,7 @@ rdma_cleanup_cbcs(RDMAXPRT *rdma_xprt) {
 				cbc_release = true;
 				cbc_release_count = cbc->write_waits;
 
-				__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s active cbc %p "
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s active cbc %p "
 				    "cbc_ref %d read_waits %d write_waits %d "
 				    "active requests %d rdma_xprt %p",
 				    __func__, cbc, cbc->refcnt, cbc->read_waits,
@@ -387,7 +387,7 @@ rdma_cleanup_cbcs(RDMAXPRT *rdma_xprt) {
 
 			if (!cbc_release) {
 				/* Pending request should cleanup this cbc */
-				__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s active cbc %p "
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s active cbc %p "
 				    "cbc_ref %d read_waits %d write_waits %d "
 				    "active requests %d rdma_xprt %p",
 				    __func__, cbc, cbc->refcnt, cbc->read_waits,
@@ -418,7 +418,7 @@ rdma_cleanup_cbcs(RDMAXPRT *rdma_xprt) {
 
 	pthread_mutex_unlock(&ioqh->qmutex);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s() after cleanup "
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s() after cleanup "
 	    "%p xp_refcnt %d active requests %d cleanup count %d "
 	    "qcount %d",
 	    __func__, &rdma_xprt->sm_dr.xprt,
@@ -440,7 +440,7 @@ rpc_rdma_thread_create(pthread_t *thrid, size_t stacksize,
 	/* Init for thread parameter (mostly for scheduling) */
 	rc = pthread_attr_init(&attr);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() can't init pthread's attributes: %s (%d)",
 			__func__, strerror(rc), rc);
 		return rc;
@@ -448,7 +448,7 @@ rpc_rdma_thread_create(pthread_t *thrid, size_t stacksize,
 
 	rc = pthread_attr_setscope(&attr, PTHREAD_SCOPE_SYSTEM);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() can't set pthread's scope: %s (%d)",
 			__func__, strerror(rc), rc);
 		return rc;
@@ -456,7 +456,7 @@ rpc_rdma_thread_create(pthread_t *thrid, size_t stacksize,
 
 	rc = pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() can't set pthread's join state: %s (%d)",
 			__func__, strerror(rc), rc);
 		return rc;
@@ -464,7 +464,7 @@ rpc_rdma_thread_create(pthread_t *thrid, size_t stacksize,
 
 	rc = pthread_attr_setstacksize(&attr, stacksize);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() can't set pthread's stack size: %s (%d)",
 			__func__, strerror(rc), rc);
 		return rc;
@@ -496,7 +496,7 @@ rpc_rdma_thread_create_epoll_cq(void *(*routine)(void *))
 		epollfd = epoll_create(EPOLL_SIZE);
 		if (epollfd == -1) {
 			rc = errno;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() epoll_create failed: %s (%d)",
 				__func__, strerror(rc), rc);
 			break;
@@ -508,7 +508,7 @@ rpc_rdma_thread_create_epoll_cq(void *(*routine)(void *))
 			routine,
 			(void*) (&rpc_rdma_state.cq_epollfd[rpc_rdma_state.cq_thread_count]));
 		if (rc) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() could not create thread: %s (%d)",
 				__func__, strerror(rc), rc);
 			break;
@@ -516,7 +516,7 @@ rpc_rdma_thread_create_epoll_cq(void *(*routine)(void *))
 
 		rpc_rdma_state.cq_thread_ids[rpc_rdma_state.cq_thread_count] = thrid;
 
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() thread %lx spawned for epoll %d",
 			__func__,
 			(unsigned long)thrid,
@@ -542,7 +542,7 @@ rpc_rdma_thread_create_epoll(pthread_t *thrid, void *(*routine)(void *),
 		*epollfd = epoll_create(EPOLL_SIZE);
 		if (*epollfd == -1) {
 			rc = errno;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() epoll_create failed: %s (%d)",
 				__func__, strerror(rc), rc);
 			break;
@@ -551,7 +551,7 @@ rpc_rdma_thread_create_epoll(pthread_t *thrid, void *(*routine)(void *),
 		rc = rpc_rdma_thread_create(thrid, WORKER_STACK_SIZE,
 					routine, arg);
 		if (rc) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() could not create thread: %s (%d)",
 				__func__, strerror(rc), rc);
 			*thrid = 0;
@@ -619,7 +619,7 @@ rpc_rdma_worker_callback(struct work_pool_entry *wpe)
 		break;
 
 	default:
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] cbc %p opcode: %d unknown",
 			__func__, rdma_xprt, rdma_xprt->state, cbc, cbc->opcode);
 		break;
@@ -644,7 +644,7 @@ rpc_rdma_fd_add(RDMAXPRT *rdma_xprt, int fd, int epollfd)
 
 	if (rc < 0) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p Failed to make the channel nonblock: %s (%d)",
 			__func__, rdma_xprt, strerror(rc), rc);
 		return rc;
@@ -656,13 +656,13 @@ rpc_rdma_fd_add(RDMAXPRT *rdma_xprt, int fd, int epollfd)
 	rc = epoll_ctl(epollfd, EPOLL_CTL_ADD, fd, &ev);
 	if (rc == -1) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p Failed to add fd to epoll: %s (%d)",
 			__func__, rdma_xprt, strerror(rc), rc);
 		return rc;
 	}
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%p:rpc_rdma_fd_add fd:%d epollfd:%d",
 		pthread_self(), fd, epollfd);
 
@@ -672,7 +672,7 @@ rpc_rdma_fd_add(RDMAXPRT *rdma_xprt, int fd, int epollfd)
 int
 rpc_rdma_fd_del(int fd, int epollfd)
 {
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%p:rpc_rdma_fd_del fd:%d epollfd:%d",
 		pthread_self(), fd, epollfd);
 
@@ -681,7 +681,7 @@ rpc_rdma_fd_del(int fd, int epollfd)
 	/* Let epoll deal with multiple deletes of the same fd */
 	if (rc == -1 && errno != ENOENT) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() Failed to del fd to epoll: %s (%d)",
 			__func__, strerror(rc), rc);
 		return rc;
@@ -704,7 +704,7 @@ rpc_rdma_stats_add(RDMAXPRT *rdma_xprt)
 	rdma_xprt->stats_sock = socket(AF_UNIX, SOCK_STREAM, 0);
 	if (rdma_xprt->stats_sock == -1) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() socket on stats socket failed, quitting thread: %s (%d)",
 			__func__, strerror(rc), rc);
 		return rc;
@@ -721,7 +721,7 @@ rpc_rdma_stats_add(RDMAXPRT *rdma_xprt)
 						sizeof(sockaddr));
 	if (rc == -1) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() bind on stats socket failed, quitting thread: %s (%d)",
 			__func__, strerror(rc), rc);
 		return rc;
@@ -730,7 +730,7 @@ rpc_rdma_stats_add(RDMAXPRT *rdma_xprt)
 	rc = listen(rdma_xprt->stats_sock, 5);
 	if (rc == -1) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() listen on stats socket failed, quitting thread: %s (%d)",
 			__func__, strerror(rc), rc);
 		return rc;
@@ -781,7 +781,7 @@ rpc_rdma_stats_thread(void *arg)
 				continue;
 
 			rc = errno;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() epoll_wait failed: %s (%d)",
 				__func__, strerror(rc), rc);
 			break;
@@ -790,7 +790,7 @@ rpc_rdma_stats_thread(void *arg)
 		for (i = 0; i < n; ++i) {
 			rdma_xprt = (RDMAXPRT*)epoll_events[i].data.ptr;
 			if (!rdma_xprt) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() no rdma_xprt: got an event on a fd that should have been removed!",
 					__func__);
 				continue;
@@ -808,7 +808,7 @@ rpc_rdma_stats_thread(void *arg)
 				if (errno == EINTR) {
 					continue;
 				} else {
-					__warnx(TIRPC_DEBUG_FLAG_ERROR,
+					__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 						"%s() accept on stats socket failed: %s (%d)",
 						__func__, strerror(errno), errno);
 					continue;
@@ -866,14 +866,14 @@ rpc_rdma_cq_event_handler(RDMAXPRT *rdma_xprt, int expected_poll_count)
 	if (rc) {
 		rc = errno;
 		if (rc != EAGAIN) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() ibv_get_cq_event failed: %d.",
 				__func__, rc);
 		}
 		return rc;
 	}
 	if (ev_cq != rdma_xprt->cq) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() Unknown cq %p",
 			__func__, ev_cq);
 		ibv_ack_cq_events(ev_cq, 1);
@@ -882,7 +882,7 @@ rpc_rdma_cq_event_handler(RDMAXPRT *rdma_xprt, int expected_poll_count)
 
 	rc = ibv_req_notify_cq(rdma_xprt->cq, 0);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() ibv_req_notify_cq failed: %d.",
 			__func__, rc);
 		return rc;
@@ -904,7 +904,7 @@ rpc_rdma_cq_event_handler(RDMAXPRT *rdma_xprt, int expected_poll_count)
 			}
 
 			if (rdma_xprt->bad_send_wr) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() Something was bad on that send",
 					__func__);
 				rc = -1;
@@ -933,7 +933,7 @@ rpc_rdma_cq_event_handler(RDMAXPRT *rdma_xprt, int expected_poll_count)
 						break;
 				}
 
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() cq completion status: %s (%d) rdma_xprt state %x opcode %d cbc %p "
 					"inline %d",
 					__func__, ibv_wc_status_str(wc[i].status), wc[i].status,
@@ -1015,7 +1015,7 @@ rpc_rdma_cq_event_handler(RDMAXPRT *rdma_xprt, int expected_poll_count)
 					data->v.vio_tail = data->v.vio_head + len;
 					VALGRIND_MAKE_MEM_DEFINED(data->v.vio_head, ioquv_length(data));
 				} else if (len) {
-					__warnx(TIRPC_DEBUG_FLAG_ERROR,
+					__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 						"%s() ERROR %d leftover bytes?",
 						__func__, len);
 				}
@@ -1030,7 +1030,7 @@ rpc_rdma_cq_event_handler(RDMAXPRT *rdma_xprt, int expected_poll_count)
 				break;
 
 			default:
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() unknown opcode: %d",
 					__func__, wc[i].opcode);
 				rc = EINVAL;
@@ -1039,7 +1039,7 @@ rpc_rdma_cq_event_handler(RDMAXPRT *rdma_xprt, int expected_poll_count)
 	}
 
 	if (npoll < 0) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] ibv_poll_cq failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(-npoll), -npoll);
 		rc = -npoll;
@@ -1118,11 +1118,7 @@ rpc_rdma_cq_thread(void *arg)
 	int rc;
 	int epollfd = *((int *) arg);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
-		"%p, Starting rpc_rdma_cq_thread epollfd:%d",
-		pthread_self(), epollfd);
-
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%p, Starting rpc_rdma_cq_thread epollfd:%d",
 		pthread_self(), epollfd);
 
@@ -1146,7 +1142,7 @@ rpc_rdma_cq_thread(void *arg)
 				continue;
 
 			rc = errno;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() epoll_wait failed: %s (%d)",
 				__func__, strerror(rc), rc);
 			break;
@@ -1155,7 +1151,7 @@ rpc_rdma_cq_thread(void *arg)
 		for (i = 0; i < n; ++i) {
 			rdma_xprt = (RDMAXPRT*)epoll_events[i].data.ptr;
 			if (!rdma_xprt) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() got an event on a fd that should have "
 					"been removed! (no rdma_xprt)",
 					__func__);
@@ -1167,7 +1163,7 @@ rpc_rdma_cq_thread(void *arg)
 
 			if (epoll_events[i].events == EPOLLERR
 			 || epoll_events[i].events == EPOLLHUP) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() epoll error or hup (%d) rdma_xprt %p",
 					__func__, epoll_events[i].events, rdma_xprt);
 
@@ -1216,19 +1212,19 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		__func__, ep_rdma_xprt, rdma_event_str(event->event));
 
 	if (rdma_xprt->bad_recv_wr) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() Something was bad on that recv",
 			__func__);
 	}
 	if (rdma_xprt->bad_send_wr) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() Something was bad on that send",
 			__func__);
 	}
 
 	switch (event->event) {
 	case RDMA_CM_EVENT_ADDR_RESOLVED:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p ADDR_RESOLVED",
 			__func__, rdma_xprt);
 		mutex_lock(&rdma_xprt->cm_lock);
@@ -1238,7 +1234,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_ROUTE_RESOLVED:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p ROUTE_RESOLVED",
 			__func__, rdma_xprt);
 		mutex_lock(&rdma_xprt->cm_lock);
@@ -1248,7 +1244,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_ESTABLISHED:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p ESTABLISHED",
 			__func__, rdma_xprt);
 
@@ -1260,7 +1256,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 			rc = rpc_rdma_fd_add(rdma_xprt, cq_fd,
 				     rpc_rdma_state.cq_epollfd[cq_thread_index]);
 			if (rc) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s:%u ERROR (return)",
 					__func__, __LINE__);
 			}
@@ -1269,7 +1265,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_CONNECT_REQUEST:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p CONNECT_REQUEST",
 			__func__, rdma_xprt);
 		rpc_rdma_state.c_r.id_queue[0] = cm_id;
@@ -1282,7 +1278,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 	case RDMA_CM_EVENT_CONNECT_ERROR:
 	case RDMA_CM_EVENT_UNREACHABLE:
 	case RDMA_CM_EVENT_REJECTED:
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] cma event %s, error %d",
 			__func__, rdma_xprt, rdma_xprt->state,
 			rdma_event_str(event->event), event->status);
@@ -1292,7 +1288,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_DISCONNECTED:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p[%u] DISCONNECT EVENT...",
 			__func__, rdma_xprt, rdma_xprt->state);
 
@@ -1301,14 +1297,14 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	case RDMA_CM_EVENT_DEVICE_REMOVAL:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 			"%s() %p[%u] cma detected device removal!!!!",
 			__func__, rdma_xprt, rdma_xprt->state);
 		rc = ENODEV;
 		break;
 
 	case RDMA_CM_EVENT_TIMEWAIT_EXIT:
-		__warnx(TIRPC_DEBUG_FLAG_EVENT,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		    "%s() %p[%u] RDMA_CM_EVENT_TIMEWAIT_EXIT",
 		    __func__, rdma_xprt, rdma_xprt->state);
 
@@ -1319,7 +1315,7 @@ rpc_rdma_cm_event_handler(RDMAXPRT *ep_rdma_xprt, struct rdma_cm_event *event)
 		break;
 
 	default:
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] unhandled event: %s, ignoring %d\n",
 			__func__, rdma_xprt, rdma_xprt->state,
 			rdma_event_str(event->event), event->event);
@@ -1356,7 +1352,7 @@ rpc_rdma_cm_thread(void *nullarg)
 				continue;
 
 			rc = errno;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() %p[%u] epoll_wait failed: %s (%d)",
 				__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 			break;
@@ -1366,7 +1362,7 @@ rpc_rdma_cm_thread(void *nullarg)
 			/* data.ptr is in rpc_rdma_fd_add */
 			rdma_xprt = (RDMAXPRT*)epoll_events[i].data.ptr;
 			if (!rdma_xprt) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() got an event on a fd that should have been removed! (no rdma_xprt)",
 					__func__);
 				continue;
@@ -1374,7 +1370,7 @@ rpc_rdma_cm_thread(void *nullarg)
 
 			if (epoll_events[i].events == EPOLLERR
 			 || epoll_events[i].events == EPOLLHUP) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() epoll error or hup (%d) rdma_xprt %p",
 					__func__, epoll_events[i].events, rdma_xprt);
 				SVC_DESTROY(&rdma_xprt->sm_dr.xprt);
@@ -1382,7 +1378,7 @@ rpc_rdma_cm_thread(void *nullarg)
 			}
 
 			if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() got a cm event on a closed rdma_xprt %p",
 					__func__, rdma_xprt);
 			}
@@ -1392,7 +1388,7 @@ rpc_rdma_cm_thread(void *nullarg)
 			rc = rdma_get_cm_event(rdma_xprt->event_channel, &event);
 			if (rc) {
 				rc = errno;
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() rdma_get_cm_event failed: %d rdma_xprt %p",
 					__func__, rc, rdma_xprt);
 				SVC_DESTROY(&rdma_xprt->sm_dr.xprt);
@@ -1431,13 +1427,13 @@ rpc_rdma_cm_event_handler_inline(RDMAXPRT *rdma_xprt, int expected_event)
 	rc = rdma_get_cm_event(rdma_xprt->event_channel, &event);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: rdma get event failed xprt %p "
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: rdma get event failed xprt %p "
 			"err %d", __func__, rdma_xprt, rc);
 		goto out;
 	}
 
 	if (event->event != expected_event) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: unexpected event %d, expected %d "
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: unexpected event %d, expected %d "
 			"xprt %s", __func__, event->event, expected_event);
 	}
 
@@ -1501,7 +1497,7 @@ rpc_rdma_destroy_stuff(RDMAXPRT *rdma_xprt)
 static void
 rdma_destroy_cbcs(RDMAXPRT *rdma_xprt) {
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 	    "%s() Destroying xprt %p cbcs qcount %u qsize %u total cbcs_memory %u",
 	    __func__, rdma_xprt, rdma_xprt->cbqh.qcount, rdma_xprt->cbqh.qsize,
 	    rdma_xprt->cbqh.qcount * rdma_xprt->cbqh.qsize);
@@ -1541,7 +1537,7 @@ rdma_destroy_cbcs(RDMAXPRT *rdma_xprt) {
 
 static void
 rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 	    "%s() Destroying xprt %p io_bufs",
 	    __func__, rdma_xprt);
 
@@ -1561,13 +1557,13 @@ rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
 			struct rpc_io_bufs *io_buf =
 				opr_containerof(have, struct rpc_io_bufs, q);
 
-			__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s Destroy io_buf %p ioqh %p count %d",
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s Destroy io_buf %p ioqh %p count %d",
 			    __func__, io_buf, ioqh, ioqh->qcount);
 
 			if ((io_buf->type == IO_BUF_ALL) ||
 			    (io_buf->type == IO_INBUF_HDR)) {
 				struct poolq_head *ioqh_bufs = &rdma_xprt->inbufs_hdr.uvqh;
-				__warnx(TIRPC_DEBUG_FLAG_EVENT,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 				    "%s() Destroying %p inbufs_hdr head %p count %d io_buf %p",
 				    __func__, rdma_xprt, ioqh_bufs, ioqh_bufs->qcount, io_buf);
 				xdr_rdma_buf_pool_destroy(ioqh_bufs, io_buf);
@@ -1576,7 +1572,7 @@ rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
 			if ((io_buf->type == IO_BUF_ALL) ||
 			    (io_buf->type == IO_OUTBUF_HDR)) {
 				struct poolq_head *ioqh_bufs = &rdma_xprt->outbufs_hdr.uvqh;
-				__warnx(TIRPC_DEBUG_FLAG_EVENT,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 				    "%s() Destroying %p outbufs_hdr head %p count %d io_buf %p",
 				    __func__, rdma_xprt, ioqh_bufs, ioqh_bufs->qcount, io_buf);
 				xdr_rdma_buf_pool_destroy(ioqh_bufs, io_buf);
@@ -1585,7 +1581,7 @@ rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
 			if ((io_buf->type == IO_BUF_ALL) ||
 			    (io_buf->type == IO_INBUF_DATA)) {
 				struct poolq_head *ioqh_bufs = &rdma_xprt->inbufs_data.uvqh;
-				__warnx(TIRPC_DEBUG_FLAG_EVENT,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 				    "%s() Destroying %p inbufs_data head %p count %d io_buf %p",
 				    __func__, rdma_xprt, ioqh_bufs, ioqh_bufs->qcount, io_buf);
 				xdr_rdma_buf_pool_destroy(ioqh_bufs, io_buf);
@@ -1594,7 +1590,7 @@ rdma_destroy_io_bufs(RDMAXPRT *rdma_xprt) {
 			if ((io_buf->type == IO_BUF_ALL) ||
 			    (io_buf->type == IO_OUTBUF_DATA)) {
 				struct poolq_head *ioqh_bufs = &rdma_xprt->outbufs_data.uvqh;
-				__warnx(TIRPC_DEBUG_FLAG_EVENT,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 				    "%s() Destroying %p outbufs_data head %p count %d io_buf %p",
 				    __func__, rdma_xprt, ioqh_bufs, ioqh_bufs->qcount, io_buf);
 				xdr_rdma_buf_pool_destroy(ioqh_bufs, io_buf);
@@ -1702,7 +1698,7 @@ rpc_rdma_allocate(const struct rpc_rdma_attr *xa)
 	int rc;
 
 	if (!xa) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() Invalid argument",
 			__func__);
 		return NULL;
@@ -1730,7 +1726,7 @@ rpc_rdma_allocate(const struct rpc_rdma_attr *xa)
 
 	rc = mutex_init(&rdma_xprt->cm_lock, NULL);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() mutex_init failed: %s (%d)",
 			__func__, strerror(rc), rc);
 		goto cm_lock;
@@ -1738,7 +1734,7 @@ rpc_rdma_allocate(const struct rpc_rdma_attr *xa)
 
 	rc = cond_init(&rdma_xprt->cm_cond, NULL, NULL);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() cond_init failed: %s (%d)",
 			__func__, strerror(rc), rc);
 		goto cm_cond;
@@ -1774,7 +1770,7 @@ rpc_rdma_ncreatef(const struct rpc_rdma_attr *xa,
 	int rc;
 
 	if (xa->backlog > 4096) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() backlog (%u) much too large",
 			__func__, xa->backlog);
 		return NULL;
@@ -1782,7 +1778,7 @@ rpc_rdma_ncreatef(const struct rpc_rdma_attr *xa,
 
 	rdma_xprt = rpc_rdma_allocate(xa);
 	if (!rdma_xprt) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		return NULL;
@@ -1795,7 +1791,7 @@ rpc_rdma_ncreatef(const struct rpc_rdma_attr *xa,
 	rdma_xprt->event_channel = rdma_create_event_channel();
 	if (!rdma_xprt->event_channel) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() create_event_channel failed: %s (%d)",
 			__func__, strerror(rc), rc);
 		goto failure;
@@ -1805,7 +1801,7 @@ rpc_rdma_ncreatef(const struct rpc_rdma_attr *xa,
 			    rdma_xprt->conn_type);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() create_id failed: %s (%d)",
 			__func__, strerror(rc), rc);
 		goto failure;
@@ -1815,7 +1811,7 @@ rpc_rdma_ncreatef(const struct rpc_rdma_attr *xa,
 	if (!svc_work_pool.params.thrd_max) {
 		pthread_mutex_unlock(&svc_work_pool.pqh.qmutex);
 
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() svc_work_pool already shutdown",
 			__func__);
 		goto failure;
@@ -1839,14 +1835,18 @@ rpc_rdma_ncreatef(const struct rpc_rdma_attr *xa,
 
 	rc = rpc_rdma_bind_server(rdma_xprt);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() NFS/RDMA dispatcher could not bind engine",
 			__func__);
 		goto failure;
 	}
-	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
-		"%s() NFS/RDMA engine bound recvsz %llu sendsz %llu rdma_xprt %p",
-		__func__, rdma_xprt->sm_dr.recvsz, rdma_xprt->sm_dr.sendsz, rdma_xprt);
+
+	__warnx(TIRPC_DEBUG_FLAG_EVENT | TIRPC_DEBUG_FLAG_RPC_RDMA,
+		"%s() RDMA: NFS/RDMA transport ready on port %s recvsz=%llu sendsz=%llu xprt=%p",
+		__func__, xa->port,
+		(unsigned long long)rdma_xprt->sm_dr.recvsz,
+		(unsigned long long)rdma_xprt->sm_dr.sendsz,
+		rdma_xprt);
 
 	return (&rdma_xprt->sm_dr.xprt);
 
@@ -1883,7 +1883,7 @@ rpc_rdma_create_qp(RDMAXPRT *rdma_xprt, struct rdma_cm_id *cm_id)
 	rc = rdma_create_qp(cm_id, rdma_xprt->pd->pd, &qp_attr);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] rdma_create_qp failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		return rc;
@@ -1895,7 +1895,7 @@ rpc_rdma_create_qp(RDMAXPRT *rdma_xprt, struct rdma_cm_id *cm_id)
 	    IBV_QP_PATH_MTU | IBV_QP_DEST_QPN | IBV_QP_RQ_PSN |
 	    IBV_QP_MAX_DEST_RD_ATOMIC | IBV_QP_MIN_RNR_TIMER, &qp_attr);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s() %p[%u] ibv_query_qp path mtu %d state %d qp type %d",
 		__func__, rdma_xprt, rdma_xprt->state, attr.qp_state,
 		attr.path_mtu, qp_attr.qp_type);
@@ -1913,7 +1913,7 @@ rpc_rdma_setup_stuff_client(RDMAXPRT *rdma_xprt)
 	rdma_xprt->comp_channel = ibv_create_comp_channel(rdma_xprt->cm_id->verbs);
 	if (!rdma_xprt->comp_channel) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: create comp channel failed xprt %p "
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: create comp channel failed xprt %p "
 			"err %d", __func__, rdma_xprt, rc);
 		goto out;
 	}
@@ -1922,7 +1922,7 @@ rpc_rdma_setup_stuff_client(RDMAXPRT *rdma_xprt)
 	    rdma_xprt, rdma_xprt->comp_channel, 0);
 	if (!rdma_xprt->cq) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: create cq failed xprt %p err %d",
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: create cq failed xprt %p err %d",
 			__func__, rdma_xprt, rc);
 		goto out;
 	}
@@ -1930,7 +1930,7 @@ rpc_rdma_setup_stuff_client(RDMAXPRT *rdma_xprt)
 	rc = ibv_req_notify_cq(rdma_xprt->cq, 0);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: notify cq failed xprt %p err %d",
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: notify cq failed xprt %p err %d",
 			__func__, rdma_xprt, rc);
 		goto out;
 	}
@@ -1938,7 +1938,7 @@ rpc_rdma_setup_stuff_client(RDMAXPRT *rdma_xprt)
 	rc = rpc_rdma_create_qp(rdma_xprt, rdma_xprt->cm_id);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: create qp failed xprt %p err %d",
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: create qp failed xprt %p err %d",
 			__func__, rdma_xprt, rc);
 	}
 
@@ -1967,7 +1967,7 @@ rpc_rdma_setup_stuff(RDMAXPRT *rdma_xprt)
 	 */
 	rc = rpc_rdma_thread_create_epoll_cq(rpc_rdma_cq_thread);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		return rc;
@@ -1976,7 +1976,7 @@ rpc_rdma_setup_stuff(RDMAXPRT *rdma_xprt)
 	if (rdma_xprt->xa->statistics_prefix != NULL
 	 && (rc = rpc_rdma_thread_create_epoll(&rpc_rdma_state.stats_thread_id,
 		rpc_rdma_stats_thread, rdma_xprt, &rpc_rdma_state.stats_epollfd))) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		return rc;
@@ -1985,7 +1985,7 @@ rpc_rdma_setup_stuff(RDMAXPRT *rdma_xprt)
 	rdma_xprt->comp_channel = ibv_create_comp_channel(rdma_xprt->cm_id->verbs);
 	if (!rdma_xprt->comp_channel) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] ibv_create_comp_channel failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		return rc;
@@ -1996,7 +1996,7 @@ rpc_rdma_setup_stuff(RDMAXPRT *rdma_xprt)
 				rdma_xprt, rdma_xprt->comp_channel, 0);
 	if (!rdma_xprt->cq) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] ibv_create_cq failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		return rc;
@@ -2004,7 +2004,7 @@ rpc_rdma_setup_stuff(RDMAXPRT *rdma_xprt)
 
 	rc = ibv_req_notify_cq(rdma_xprt->cq, 0);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] ibv_req_notify_cq failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		return rc;
@@ -2012,7 +2012,7 @@ rpc_rdma_setup_stuff(RDMAXPRT *rdma_xprt)
 
 	rc = rpc_rdma_create_qp(rdma_xprt, rdma_xprt->cm_id);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		return rc;
@@ -2072,12 +2072,12 @@ int
 rpc_rdma_setup_cbq(RDMAXPRT *rdma_xprt,
     struct poolq_head *ioqh, u_int depth, u_int sge)
 {
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s: setup cbq xprt %p depth %d sge %d",
 		__func__, rdma_xprt, depth, sge);
 
 	if (ioqh->qsize) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() contexts already allocated",
 			__func__);
 		return EINVAL;
@@ -2099,7 +2099,7 @@ rpc_rdma_setup_cbq(RDMAXPRT *rdma_xprt,
 		rpc_rdma_allocate_cbc_locked(ioqh);
 	}
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s Total cbcs_memory %u "
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s Total cbcs_memory %u "
 	    "qcount %u qsize %u xprt %p",
 	    __func__, ioqh->qcount * ioqh->qsize,
 	    ioqh->qcount, ioqh->qsize, rdma_xprt);
@@ -2124,21 +2124,21 @@ rpc_rdma_bind_server(RDMAXPRT *rdma_xprt)
 	int rc;
 
 	if (!rdma_xprt) {
-                __warnx(TIRPC_DEBUG_FLAG_ERROR,
+                __warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
                         "%s() rdma_xprt is NULL",
                         __func__);
                 return EINVAL;
         }
 
 	if (rdma_xprt->state != RDMAXS_INITIAL) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] must be initialized first!",
 			__func__, rdma_xprt, rdma_xprt->state);
 		return EINVAL;
 	}
 
 	if (rdma_xprt->server <= 0) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() Must be on server side to call this function",
 			__func__);
 		return EINVAL;
@@ -2151,7 +2151,7 @@ rpc_rdma_bind_server(RDMAXPRT *rdma_xprt)
 	rc = rdma_getaddrinfo(rdma_xprt->xa->node, rdma_xprt->xa->port, &hints, &res);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] rdma_getaddrinfo: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		return rc;
@@ -2160,7 +2160,7 @@ rpc_rdma_bind_server(RDMAXPRT *rdma_xprt)
 	rc = rdma_bind_addr(rdma_xprt->cm_id, res->ai_src_addr);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] rdma_bind_addr: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		return rc;
@@ -2170,7 +2170,7 @@ rpc_rdma_bind_server(RDMAXPRT *rdma_xprt)
 	/* at this point, the cm_id->verbs aren't filled */
 	rc = rpc_rdma_pd_by_verbs(rdma_xprt);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] register pd failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		return rc;
@@ -2179,19 +2179,30 @@ rpc_rdma_bind_server(RDMAXPRT *rdma_xprt)
 	rc = rdma_listen(rdma_xprt->cm_id, rdma_xprt->xa->backlog);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] rdma_listen failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		return rc;
 	}
 
 	rdma_xprt->state = RDMAXS_LISTENING;
+
+	/* Log at EVENT level that RDMA listener is up */
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
+		"%s() RDMA: NFS/RDMA server is now listening on node %s port %s (backlog=%d sq_depth=%d rq_depth=%d)",
+		__func__,
+		rdma_xprt->xa->node ? rdma_xprt->xa->node : "*",
+		rdma_xprt->xa->port,
+		rdma_xprt->xa->backlog,
+		rdma_xprt->xa->sq_depth,
+		rdma_xprt->xa->rq_depth);
+
 	atomic_inc_int32_t(&rpc_rdma_state.run_count);
 
 	rc = rpc_rdma_thread_create_epoll(&rpc_rdma_state.cm_thread_id,
 		rpc_rdma_cm_thread, rdma_xprt, &rpc_rdma_state.cm_epollfd);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] rpc_rdma_thread_create_epoll failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 		(void) atomic_dec_int32_t(&rpc_rdma_state.run_count);
@@ -2217,7 +2228,7 @@ rpc_rdma_clone(RDMAXPRT *l_rdma_xprt, struct rdma_cm_id *cm_id)
 	int rc;
 
 	if (!rdma_xprt) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		return NULL;
@@ -2232,7 +2243,7 @@ rpc_rdma_clone(RDMAXPRT *l_rdma_xprt, struct rdma_cm_id *cm_id)
 
 	rc = rpc_rdma_pd_get(rdma_xprt);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		goto failure;
@@ -2248,7 +2259,7 @@ rpc_rdma_clone(RDMAXPRT *l_rdma_xprt, struct rdma_cm_id *cm_id)
 				ibv_create_srq(rdma_xprt->pd->pd, &srq_attr);
 			if (!rdma_xprt->pd->srq) {
 				rc = errno;
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s() ibv_create_srq failed: %s (%d)",
 					__func__, strerror(rc), rc);
 				goto failure;
@@ -2260,7 +2271,7 @@ rpc_rdma_clone(RDMAXPRT *l_rdma_xprt, struct rdma_cm_id *cm_id)
 						rdma_xprt->xa->rq_depth,
 						rdma_xprt->xa->max_recv_sge);
 			if (rc) {
-				__warnx(TIRPC_DEBUG_FLAG_ERROR,
+				__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 					"%s:%u ERROR (return)",
 					__func__, __LINE__);
 				goto failure;
@@ -2272,7 +2283,7 @@ rpc_rdma_clone(RDMAXPRT *l_rdma_xprt, struct rdma_cm_id *cm_id)
 					rdma_xprt->xa->sq_depth,
 					rdma_xprt->xa->credits);
 		if (rc) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s:%u ERROR (return)",
 				__func__, __LINE__);
 			goto failure;
@@ -2282,7 +2293,7 @@ rpc_rdma_clone(RDMAXPRT *l_rdma_xprt, struct rdma_cm_id *cm_id)
 					MAX_CBC_ALLOCATION(rdma_xprt->xa),
 					rdma_xprt->xa->credits);
 		if (rc) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s:%u ERROR (return)",
 				__func__, __LINE__);
 			goto failure;
@@ -2294,7 +2305,7 @@ rpc_rdma_clone(RDMAXPRT *l_rdma_xprt, struct rdma_cm_id *cm_id)
 
 	rc = rpc_rdma_setup_stuff(rdma_xprt);
 	if (rc) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s:%u ERROR (return)",
 			__func__, __LINE__);
 		goto failure;
@@ -2323,14 +2334,14 @@ rpc_rdma_accept_finalize(RDMAXPRT *rdma_xprt)
 	int rc;
 
 	if (!rdma_xprt) {
-                __warnx(TIRPC_DEBUG_FLAG_ERROR,
+                __warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
                         "%s() rdma_xprt is NULL",
                         __func__);
                 return EINVAL;
         }
 
 	if (rdma_xprt->state != RDMAXS_CONNECT_REQUEST) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] isn't from a connection request?",
 			__func__, rdma_xprt, rdma_xprt->state);
 		return EINVAL;
@@ -2346,7 +2357,7 @@ rpc_rdma_accept_finalize(RDMAXPRT *rdma_xprt)
 	rc = rdma_accept(rdma_xprt->cm_id, &conn_param);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] rdma_accept failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 	}
@@ -2369,17 +2380,17 @@ rpc_rdma_accept_timedwait(RDMAXPRT *l_rdma_xprt, struct timespec *abstime)
 {
 	struct rdma_cm_id *cm_id;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s() %p[%u] listening (after bind_server)",
 		__func__, l_rdma_xprt, l_rdma_xprt->state);
 
 	if (!l_rdma_xprt || l_rdma_xprt->state != RDMAXS_LISTENING) {
 		if (!l_rdma_xprt) {
-                        __warnx(TIRPC_DEBUG_FLAG_ERROR,
+                        __warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
                                 "%s() listening (parent) transport is NULL",
                                 __func__);
                 } else {
-                        __warnx(TIRPC_DEBUG_FLAG_ERROR,
+                        __warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
                                 "%s() %p[%u] isn't listening (after bind_server)?",
                                 __func__, l_rdma_xprt, l_rdma_xprt->state);
                 }
@@ -2389,7 +2400,7 @@ rpc_rdma_accept_timedwait(RDMAXPRT *l_rdma_xprt, struct timespec *abstime)
 	cm_id = rpc_rdma_state.c_r.id_queue[0];
 
 	if (!cm_id) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() missing cm_id",
 			__func__);
 		return (NULL);
@@ -2403,7 +2414,7 @@ rpc_rdma_accept_wait(RDMAXPRT *l_rdma_xprt, int msleep)
 {
 	struct timespec ts;
 
-	__warnx(TIRPC_DEBUG_FLAG_ERROR,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 		"%s() accept wait msleep %d",
 		__func__, msleep);
 	if (msleep == 0)
@@ -2436,7 +2447,7 @@ rpc_rdma_bind_client(RDMAXPRT *rdma_xprt)
 		memset(&hints, 0, sizeof(hints));
 		hints.ai_port_space = rdma_xprt->conn_type;
 
-		__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s: resolve %s port %d", __func__,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s: resolve %s port %d", __func__,
 			rdma_xprt->sm_dr.xprt.xp_ip, rdma_xprt->sm_dr.xprt.xp_port);
 		char port_str[SOCK_NAME_MAX];
 		snprintf(port_str, SOCK_NAME_MAX, "%d", rdma_xprt->sm_dr.xprt.xp_port);
@@ -2445,7 +2456,7 @@ rpc_rdma_bind_client(RDMAXPRT *rdma_xprt)
 					&hints, &res);
 		if (rc) {
 			rc = errno;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() %p[%u] rdma_getaddrinfo: %s (%d) ip %s port %d",
 				__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc,
 				rdma_xprt->sm_dr.xprt.xp_ip, rdma_xprt->sm_dr.xprt.xp_port);
@@ -2457,7 +2468,7 @@ rpc_rdma_bind_client(RDMAXPRT *rdma_xprt)
 					5000);
 		if (rc) {
 			rc = errno;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() %p[%u] rdma_resolve_addr failed: %s (%d)",
 				__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 			break;
@@ -2466,7 +2477,7 @@ rpc_rdma_bind_client(RDMAXPRT *rdma_xprt)
 
 		rc = rpc_rdma_cm_event_handler_inline(rdma_xprt, RDMA_CM_EVENT_ADDR_RESOLVED);
 		if (rc) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() Could not resolve addr",
 				__func__);
 			rc = EINVAL;
@@ -2477,7 +2488,7 @@ rpc_rdma_bind_client(RDMAXPRT *rdma_xprt)
 					5000);
 		if (rc) {
 			rdma_xprt->state = RDMAXS_ERROR;
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() %p[%u] rdma_resolve_route failed: %s (%d)",
 				__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 			break;
@@ -2485,7 +2496,7 @@ rpc_rdma_bind_client(RDMAXPRT *rdma_xprt)
 
 		rc = rpc_rdma_cm_event_handler_inline(rdma_xprt, RDMA_CM_EVENT_ROUTE_RESOLVED);
 		if (rc) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s() Could not resolve route",
 				__func__);
 			rc = EINVAL;
@@ -2512,14 +2523,14 @@ rpc_rdma_connect_finalize(RDMAXPRT *rdma_xprt)
 	int rc;
 
 	if (!rdma_xprt) {
-                __warnx(TIRPC_DEBUG_FLAG_ERROR,
+                __warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
                         "%s() rdma_xprt is NULL",
                         __func__);
                 return EINVAL;
         }
 
 	if (rdma_xprt->state != RDMAXS_ROUTE_RESOLVED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] isn't half-connected?",
 			__func__, rdma_xprt, rdma_xprt->state);
 		return EINVAL;
@@ -2534,7 +2545,7 @@ rpc_rdma_connect_finalize(RDMAXPRT *rdma_xprt)
 	rc = rdma_connect(rdma_xprt->cm_id, &conn_param);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] rdma_connect failed: %s (%d)",
 			__func__, rdma_xprt, rdma_xprt->state, strerror(rc), rc);
 	}
@@ -2542,7 +2553,7 @@ rpc_rdma_connect_finalize(RDMAXPRT *rdma_xprt)
 	rc = rpc_rdma_cm_event_handler_inline(rdma_xprt, RDMA_CM_EVENT_ESTABLISHED);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: conect failed xprt %p err %d",
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: conect failed xprt %p err %d",
 			__func__, rdma_xprt, rc);
 	}
 
@@ -2558,7 +2569,7 @@ rpc_rdma_connect_prepare(RDMAXPRT *rdma_xprt)
 	rdma_xprt->event_channel = rdma_create_event_channel();
 	if (!rdma_xprt->event_channel) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: create event channel failed "
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: create event channel failed "
 			"ip %s err %d", __func__, rdma_xprt->sm_dr.xprt.xp_ip, rc);
 		goto out;
 	}
@@ -2567,7 +2578,7 @@ rpc_rdma_connect_prepare(RDMAXPRT *rdma_xprt)
 	    rdma_xprt->conn_type);
 	if (rc) {
 		rc = errno;
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: create id failed ip %s err %d",
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: create id failed ip %s err %d",
 			__func__, rdma_xprt->sm_dr.xprt.xp_ip, rc);
 		goto out;
 	}
@@ -2588,21 +2599,21 @@ rpc_rdma_connect(RDMAXPRT *rdma_xprt)
 	int rc;
 
 	if (!rdma_xprt) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
                         "%s() rdma_xprt is NULL",
                         __func__);
                 return EINVAL;
 	}
 
 	if (rdma_xprt->state != RDMAXS_INITIAL) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() %p[%u] must be initialized first!",
 			__func__, rdma_xprt, rdma_xprt->state);
 		return EINVAL;
 	}
 
 	if (rdma_xprt->server != RDMAX_CLIENT) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s() only called from client side!",
 			__func__);
 		return EINVAL;

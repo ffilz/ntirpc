@@ -211,17 +211,18 @@ xdr_rdma_respond_callback_send(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 	int ret = 0;
 	int32_t write_waits = atomic_dec_int32_t(&cbc->write_waits);
 
-	__warnx(TIRPC_DEBUG_FLAG_XDR,
-	    "%s() %p[%u] cbc %p cbc_ref %d write_waits %d\n",
-	    __func__, rdma_xprt, rdma_xprt->state, cbc,
-	    cbc->refcnt, write_waits);
 
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 		    "cbc_ref %d write_waits %d already destroyed",
 		    __func__, rdma_xprt, cbc, cbc->refcnt, write_waits);
 
 		ret =  -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_XDR,
+			"%s() %p[%u] cbc %p cbc_ref %d write_waits %d\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc,
+			cbc->refcnt, write_waits);
 	}
 
 	cbc_release_it(cbc);
@@ -235,17 +236,18 @@ xdr_rdma_destroy_callback_send(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 	int ret = 0;
 	int write_waits = atomic_dec_int32_t(&cbc->write_waits);
 
-	__warnx(TIRPC_DEBUG_FLAG_ERROR,
-	    "%s() %p[%u] cbc %p refs %d write_waits %d\n",
-	    __func__, rdma_xprt, rdma_xprt->state, cbc,
-	    cbc->refcnt, write_waits);
 
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 		    "cbc_ref %d write_waits %d already destroyed",
 		    __func__, rdma_xprt, cbc, cbc->refcnt, write_waits);
 
 		ret = -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			"%s() %p[%u] cbc %p refs %d write_waits %d\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc,
+			cbc->refcnt, write_waits);
 	}
 
 	cbc_release_it(cbc);
@@ -260,15 +262,15 @@ xdr_rdma_respond_callback(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 {
 	int ret = 0;
 
-	__warnx(TIRPC_DEBUG_FLAG_XDR,
-		"%s() %p[%u] cbc %p\n",
-		__func__, rdma_xprt, rdma_xprt->state, cbc);
-
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 			"already destroyed", __func__, rdma_xprt, cbc);
 
 		ret = -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_XDR,
+			"%s() %p[%u] cbc %p\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc);
 	}
 
 	xdr_rdma_callback_signal(cbc, rdma_xprt);
@@ -283,15 +285,16 @@ xdr_rdma_destroy_callback(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 {
 	int ret = 0;
 
-	__warnx(TIRPC_DEBUG_FLAG_ERROR,
-		"%s() %p[%u] cbc %p\n",
-		__func__, rdma_xprt, rdma_xprt->state, cbc);
-
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 			"already destroyed", __func__, rdma_xprt, cbc);
 
 		ret = -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			"%s() %p[%u] cbc %p\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc);
+
 	}
 
 	xdr_rdma_callback_signal(cbc, rdma_xprt);
@@ -308,15 +311,16 @@ xdr_rdma_destroy_callback_recv(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 {
 	int ret = 0;
 
-	__warnx(TIRPC_DEBUG_FLAG_ERROR,
-		"Error in recv callback %s() %p[%u] cbc %p\n",
-		__func__, rdma_xprt, rdma_xprt->state, cbc);
-
 	if (rdma_xprt->sm_dr.xprt.xp_flags & SVC_XPRT_FLAG_DESTROYED) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR, " %s rdma_xprt %p cbc %p "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, " %s rdma_xprt %p cbc %p "
 			"already destroyed", __func__, rdma_xprt, cbc);
 
 		ret = -1;
+	} else {
+		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			"Error in recv callback %s() %p[%u] cbc %p\n",
+			__func__, rdma_xprt, rdma_xprt->state, cbc);
+
 	}
 
 	cbc->cbc_flags = CBC_FLAG_RELEASE;
@@ -354,6 +358,33 @@ xdr_rdma_wrap_callback(struct rpc_rdma_cbc *cbc, RDMAXPRT *rdma_xprt)
 	ret = (int)svc_request(&rdma_xprt->sm_dr.xprt, xdrs);
 
 	atomic_dec_uint32_t(&rdma_xprt->active_requests);
+
+	if ((enum xprt_stat)ret == XPRT_SUSPEND) {
+		/*
+		 * The request was suspended mid-compound
+		 * e.g. QOS BW throttle, async IO backend.
+		 * No RDMA WRITE/SEND operations have been posted
+		 * yet, so cbc->refcnt is still 1 (sentinel only).  Releasing
+		 * the sentinel here would drop refcnt to 0, which triggers
+		 * xdr_rdma_ioq_release(&cbc->dataq), zeroing dataq.qcount and
+		 * returning data_chunk_uv to the pool while the suspended
+		 * request still holds a pointer to it.  The subsequent
+		 * xdr_rdma_svc_flushout call would then hit:
+		 *   assert(dataq.qcount > 0)  fires with qcount == 0
+		 *
+		 * Fix: mark FLAG_RELEASE (so cleanup fires when refs eventually
+		 * reach 0) but defer the sentinel cbc_release_it to
+		 * xdr_rdma_svc_flushout, which is called after RDMA operations
+		 * are posted on the resume path and their refs keep the cbc
+		 * alive.
+		 */
+		__warnx(TIRPC_DEBUG_FLAG_XDR,
+			"%s rdma_xprt %p cbc %p suspended, deferring "
+			"sentinel release to flushout",
+			__func__, rdma_xprt, cbc);
+		cbc->cbc_flags = CBC_FLAG_RELEASE | CBC_FLAG_SENTINEL_PENDING;
+		return ret;
+	}
 
 err:
 	cbc->cbc_flags = CBC_FLAG_RELEASE;
@@ -1042,7 +1073,7 @@ xdr_rdma_add_bufs_locked(RDMAXPRT *rdma_xprt, struct ibv_mr *mr,
 
 		data->rdma_uv = 1;
 
-		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 			"%s() recvbuf at %p base %p",
 			__func__, data, b_addr);
 
@@ -1116,7 +1147,7 @@ xdr_rdma_update_io_bufs(RDMAXPRT *rdma_xprt, struct ibv_mr *mr, uint32_t buffer_
 	rdma_xprt->io_bufs_count++;
 	rdma_xprt->io_bufs.qcount++;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() io bufs count %u io_buf %p rdma_xprt %p",
 		__func__, rdma_xprt->io_bufs_count, io_buf, rdma_xprt);
 
@@ -1140,7 +1171,7 @@ xdr_rdma_reg_mr(RDMAXPRT *rdma_xprt, uint8_t *buffer_aligned, uint32_t buffer_to
 	if (mr) {
 		atomic_add_uint64_t(&total_rdma_reg_mem, buffer_total);
 
-		__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s: total_rdma_reg_mem %llu registered, "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, "%s: total_rdma_reg_mem %llu registered, "
 		    "registering for xprt %p mr %p buffer_aligned %p buffer_total %u",
 		    __func__, atomic_fetch_uint64_t(&total_rdma_reg_mem),
 		    rdma_xprt, mr, buffer_aligned, buffer_total);
@@ -1173,7 +1204,7 @@ xdr_rdma_dereg_mr(RDMAXPRT *rdma_xprt, struct ibv_mr *mr,
 	} else {
 		atomic_sub_uint64_t(&total_rdma_reg_mem, buffer_total);
 
-		__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s: total_rdma_reg_mem %llu registered, "
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, "%s: total_rdma_reg_mem %llu registered, "
 		    "unregistering for xprt %p mr %p buffer_aligned %p buffer_total %u",
 		    __func__, atomic_fetch_uint64_t(&total_rdma_reg_mem),
 		    rdma_xprt, mr, buffer_aligned, buffer_total);
@@ -1190,7 +1221,7 @@ xdr_rdma_add_outbufs_hdr(RDMAXPRT *rdma_xprt)
 	uint32_t buffer_total = rdma_xprt->sm_dr.send_hdr_sz * hdr_qdepth;
 	struct rpc_io_bufs *io_buf = NULL;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_total %llu, sendsz %llu sq %llu rdma_xprt %p pagesz %llu",
 		__func__, buffer_total, rdma_xprt->sm_dr.send_hdr_sz, hdr_qdepth,
 		rdma_xprt, rdma_xprt->sm_dr.pagesz);
@@ -1200,7 +1231,7 @@ xdr_rdma_add_outbufs_hdr(RDMAXPRT *rdma_xprt)
 	assert(buffer_aligned);
 	memset(buffer_aligned, 0, buffer_total);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_aligned at %p protection domain %p rdma_xprt %p",
 		__func__, buffer_aligned, rdma_xprt->pd->pd, rdma_xprt);
 
@@ -1227,7 +1258,7 @@ xdr_rdma_add_outbufs_data(RDMAXPRT *rdma_xprt)
 	uint32_t buffer_total = rdma_xprt->sm_dr.sendsz * data_qdepth;
 	struct rpc_io_bufs *io_buf = NULL;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_total %llu, sendsz %llu sq %llu rdma_xprt %p pagesz %llu",
 		__func__, buffer_total, rdma_xprt->sm_dr.sendsz, data_qdepth,
 		rdma_xprt, rdma_xprt->sm_dr.pagesz);
@@ -1237,7 +1268,7 @@ xdr_rdma_add_outbufs_data(RDMAXPRT *rdma_xprt)
 	assert(buffer_aligned);
 	memset(buffer_aligned, 0, buffer_total);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_aligned at %p protection domain %p rdma_xprt %p",
 		__func__, buffer_aligned, rdma_xprt->pd->pd, rdma_xprt);
 
@@ -1264,7 +1295,7 @@ xdr_rdma_add_inbufs_hdr(RDMAXPRT *rdma_xprt)
 	uint32_t buffer_total = rdma_xprt->sm_dr.recv_hdr_sz * hdr_qdepth;
 	struct rpc_io_bufs *io_buf = NULL;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_total %llu, recvsz %llu rq %llu rdma_xprt %p pagesz %llu",
 		__func__, buffer_total, rdma_xprt->sm_dr.recv_hdr_sz, hdr_qdepth,
 		rdma_xprt, rdma_xprt->sm_dr.pagesz);
@@ -1274,7 +1305,7 @@ xdr_rdma_add_inbufs_hdr(RDMAXPRT *rdma_xprt)
 	assert(buffer_aligned);
 	memset(buffer_aligned, 0, buffer_total);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_aligned at %p protection domain %p rdma_xprt %p",
 		__func__, buffer_aligned, rdma_xprt->pd->pd, rdma_xprt);
 
@@ -1301,7 +1332,7 @@ xdr_rdma_add_inbufs_data(RDMAXPRT *rdma_xprt)
 	uint32_t buffer_total = rdma_xprt->sm_dr.recvsz * data_qdepth;
 	struct rpc_io_bufs *io_buf = NULL;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_total %llu, recvsz %llu rq %llu rdma_xprt %p pagesz %llu",
 		__func__, buffer_total, rdma_xprt->sm_dr.recvsz, data_qdepth,
 		rdma_xprt, rdma_xprt->sm_dr.pagesz);
@@ -1311,7 +1342,7 @@ xdr_rdma_add_inbufs_data(RDMAXPRT *rdma_xprt)
 	assert(buffer_aligned);
 	memset(buffer_aligned, 0, buffer_total);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_aligned at %p protection domain %p rdma_xprt %p",
 		__func__, buffer_aligned, rdma_xprt->pd->pd, rdma_xprt);
 
@@ -1366,7 +1397,7 @@ xdr_rdma_create(RDMAXPRT *rdma_xprt)
 
 	rdma_xprt->buffer_total = tirpc_buff_total + total_hdr_sz;
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_total %llu(%llu + %llu), rdma_xprt %p pagesz %llu "
 		"recvsz data %llu hdr %llu rq %llu "
 		"sendsz data %llu hdr %llu sq %llu",
@@ -1380,7 +1411,7 @@ xdr_rdma_create(RDMAXPRT *rdma_xprt)
 	assert(rdma_xprt->buffer_aligned);
 	memset(rdma_xprt->buffer_aligned, 0, rdma_xprt->buffer_total);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 		"%s() buffer_aligned at %p protection domain %p rdma_xprt %p",
 		__func__, rdma_xprt->buffer_aligned, rdma_xprt->pd->pd, rdma_xprt);
 
@@ -1439,14 +1470,14 @@ xdr_rdma_create(RDMAXPRT *rdma_xprt)
 	 * we could have max cbcs required will be callq_size * 2 */
 	int callq_size = MAX_RECV_OUTSTANDING(rdma_xprt->xa);
 
-	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "callq size %d", callq_size);
+	__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA, "callq size %d", callq_size);
 
 	poolq_head_setup(&rdma_xprt->cbclist);
 
 	while (rdma_xprt->sm_dr.ioq.ioq_uv.uvqh.qcount < callq_size) {
 		/* Post callq_size buffers to do first recvs
 		 * callback will be done on recv which should rearam again */
-		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
+		__warnx(TIRPC_DEBUG_FLAG_XDR_RDMA,
 			"%s() qcount %d callq size %d",
 			__func__, rdma_xprt->sm_dr.ioq.ioq_uv.uvqh.qcount,
 			callq_size);
@@ -1973,16 +2004,35 @@ xdr_rdma_svc_reply(struct rpc_rdma_cbc *cbc, u_int32_t xid,
 				IOQ_(have)->v.vio_wrap = (char *)IOQ_(have)->v.vio_base
 					+ rdma_xprt->sm_dr.send_hdr_sz;
 			} else {
-				/* For reply_list we copy from protocol buffer so allocate bigger
-				 * chunk */
-				assert(l <= rdma_xprt->sm_dr.sendsz);
+				/* For reply_list we copy from protocol buffer so allocate
+				 * bigger chunk.
+				 *
+				 * The client's reply chunk length (l) can legally exceed
+				 * sendsz: the client pre-registers a buffer of maxcount +
+				 * NFS COMPOUND overhead (a few hundred bytes), and when
+				 * maxcount == sendsz (= RDMA_DATA_CHUNK_SZ = 1 MiB) the
+				 * total l > sendsz.
+				 *
+				 * vio_wrap is set to min(l, sendsz):
+				 * l < sendsz: honour the client's actual chunk capacity.
+				 * l >= sendsz: cap at the physical buffer size to prevent
+				 * a server-side buffer overflow (the overflow data is
+				 * only NFS header bytes, far less than sendsz).
+				 *
+				 * The RDMA WRITE size is derived from ioquv_length() =
+				 * vio_tail - vio_head (actual bytes written by XDR), never
+				 * from l, so the transfer stays within both the server buffer
+				 * and the client's pre-registered region.
+				 */
 				have = xdr_rdma_ioq_uv_fetch(&cbc->sendq, &rdma_xprt->outbufs_data.uvqh,
 				    "sreply buffer", 1, IOQ_FLAG_NONE);
 
-				/* buffer is limited size */
+				/* buffer is limited to min(l, sendsz) */
 				IOQ_(have)->v.vio_head =
 				IOQ_(have)->v.vio_tail = IOQ_(have)->v.vio_base;
-				IOQ_(have)->v.vio_wrap = (char *)IOQ_(have)->v.vio_base + l;
+				IOQ_(have)->v.vio_wrap = (char *)IOQ_(have)->v.vio_base
+                                   + (l < rdma_xprt->sm_dr.sendsz
+                                      ? l : rdma_xprt->sm_dr.sendsz);
 			}
 		}
 		if (!allocate_header)
@@ -2325,8 +2375,13 @@ xdr_rdma_svc_flushout(struct rpc_rdma_cbc *cbc, bool rdma_buf_used)
 			uint32_t length = ntohl(c_seg->length);
 			uint32_t nfs_header_len = ioquv_length(nfs_header_uv);
 
-			assert(length <= rdma_xprt->sm_dr.sendsz);
-
+			/* Do not assert, if length > sendsz: the client can legitimately
+			 * pre-register a reply chunk larger than sendsz (e.g. when
+			 * maxcount equals sendsz the total chunk includes NFS COMPOUND
+			 * overhead pushing l above sendsz). The actual RDMA WRITE size
+			 * is write_len = min(rdma_buf_len, length) <= sendsz, so the
+			 * transfer is always within the server's registered buffer.
+			 */
 			*w_seg = *c_seg;
 
 			__warnx(TIRPC_DEBUG_FLAG_XDR,
@@ -2444,6 +2499,26 @@ xdr_rdma_svc_flushout(struct rpc_rdma_cbc *cbc, bool rdma_buf_used)
 	/* Release uio for read/readdir */
 	if (uio_refer) {
 		uio_refer->uio_release(uio_refer, UIO_FLAG_NONE);
+	}
+
+	/*
+	 * Release the deferred sentinel ref when the request was suspended
+	 * by wrap_callback (e.g. QOS, async IO). In that path CBC_FLAG_RELEASE
+	 * was set but cbc_release_it was intentionally skipped to keep
+	 * cbc->dataq alive.  Now that all RDMA operations have been posted
+	 * (taking their own refs), it is safe to drop the sentinel.  The
+	 * last RDMA completion will then see refcnt==0 with CBC_FLAG_RELEASE
+	 * set and trigger the normal cbc cleanup.
+	 *
+	 * For the normal (non-suspended) path CBC_FLAG_SENTINEL_PENDING is
+	 * never set, so this is a no-op.
+	 */
+	if (cbc->cbc_flags & CBC_FLAG_SENTINEL_PENDING) {
+		cbc->cbc_flags &= ~CBC_FLAG_SENTINEL_PENDING;
+		__warnx(TIRPC_DEBUG_FLAG_XDR,
+			"%s rdma_xprt %p cbc %p releasing deferred sentinel",
+			__func__, rdma_xprt, cbc);
+		cbc_release_it(cbc);
 	}
 
 	__warnx(TIRPC_DEBUG_FLAG_XDR, "%s: cbc %p recvq %p %d sendq %p %d rdma_xprt %p",

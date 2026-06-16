@@ -103,7 +103,7 @@ clnt_rdma_ncreatef(const SVCXPRT *xprt,		/* init but NOT connect()ed */
 	if (create) {
 		rdma_xprt = rpc_rdma_allocate(((RDMAXPRT *)xprt)->xa);
 		if (!rdma_xprt) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s: rdma allocate failed", __func__);
 			cl->cl_error.re_status = RPC_SYSTEMERROR;
 			return cl;
@@ -133,7 +133,7 @@ clnt_rdma_ncreatef(const SVCXPRT *xprt,		/* init but NOT connect()ed */
 		memcpy(rdma_xprt->sm_dr.xprt.xp_ip, xprt->xp_ip, SOCK_NAME_MAX);
 		rdma_xprt->sm_dr.xprt.xp_port = xprt->xp_port;
 
-		__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s: create rdma clnt ip %s port %d",
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA, "%s: create rdma clnt ip %s port %d",
 			__func__, rdma_xprt->sm_dr.xprt.xp_ip, rdma_xprt->sm_dr.xprt.xp_port);
 
 		/* RDMAX_CLIENT indicate is client connection from
@@ -143,7 +143,7 @@ clnt_rdma_ncreatef(const SVCXPRT *xprt,		/* init but NOT connect()ed */
 		rdma_xprt->server = RDMAX_CLIENT;
 
 		if (!rdma_xprt || rdma_xprt->state != RDMAXS_INITIAL) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s: %p@%p called with invalid transport address",
 				__func__, cl, rdma_xprt);
 			cl->cl_error.re_status = RPC_UNKNOWNADDR;
@@ -151,19 +151,19 @@ clnt_rdma_ncreatef(const SVCXPRT *xprt,		/* init but NOT connect()ed */
 		}
 
 		if (rpc_rdma_connect_prepare(rdma_xprt)) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s: failed", __func__);
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR, "%s: failed", __func__);
 			cl->cl_error.re_status = RPC_UNKNOWNADDR;
 			return (cl);
 		}
 
 		if (rpc_rdma_connect(rdma_xprt)) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s: rdma connect failed", __func__);
 			cl->cl_error.re_status = RPC_UNKNOWNADDR;
 			return (cl);
 		}
 		if (rpc_rdma_connect_finalize(rdma_xprt)) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s: rdma connect finalize failed", __func__);
 			cl->cl_error.re_status = RPC_UNKNOWNADDR;
 			return (cl);
@@ -178,7 +178,7 @@ clnt_rdma_ncreatef(const SVCXPRT *xprt,		/* init but NOT connect()ed */
 		rdma_xprt->sm_dr.send_hdr_sz = rec->send_hdr_sz;
 
 		if (xdr_rdma_create(rdma_xprt)) {
-			__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 				"%s: buffer allocation failed", __func__);
 			cl->cl_error.re_status = RPC_SYSTEMERROR;
 			return (cl);
@@ -200,7 +200,7 @@ clnt_rdma_ncreatef(const SVCXPRT *xprt,		/* init but NOT connect()ed */
 	xdrmem_create(xdrs, cm->cm_cx.cx_mcallc, MCALL_MSG_SIZE,
 		      XDR_ENCODE);
 	if (!xdr_callhdr(xdrs, &call_msg)) {
-		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+		__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA | TIRPC_DEBUG_FLAG_ERROR,
 			"%s: %p@%p xdr_callhdr failed",
 			__func__, cl, rdma_xprt);
 		cl->cl_error.re_status = RPC_CANTENCODEARGS;

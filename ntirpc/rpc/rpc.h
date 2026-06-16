@@ -91,8 +91,26 @@ __END_DECLS
  * and rpcbind use only. Do not use, they may change without notice.
  */
 __BEGIN_DECLS
-int __rpc_nconf2fd(const struct netconfig *);
-int __rpc_nconf2fd_flags(const struct netconfig *, int);
+int __rpc_nconf2fd_flags_opt(const struct netconfig *, int, int);
+
+static inline int
+__rpc_nconf2fd_flags(const struct netconfig *nconf, int flags)
+{
+#ifdef SOL_IPV6
+	int opts = IPV6_V6ONLY;
+#else
+	int opts = 0;
+#endif
+
+	return __rpc_nconf2fd_flags_opt(nconf, flags, opts);
+}
+
+static inline int
+__rpc_nconf2fd(const struct netconfig *nconf)
+{
+	return __rpc_nconf2fd_flags(nconf, 0);
+}
+
 int __rpc_nconf2sockinfo(const struct netconfig *, struct __rpc_sockinfo *);
 int __rpc_fd2sockinfo(int, struct __rpc_sockinfo *);
 u_int __rpc_get_t_size(int, int, int);

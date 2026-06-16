@@ -30,6 +30,13 @@
 
 #include "config.h"
 
+/* Adding macro for compatibilty of c++ compilation */
+#ifdef __cplusplus
+#ifndef _Static_assert
+#define _Static_assert static_assert
+#endif
+#endif
+
 #ifndef _NTIRPC_RPC_HAPROXY_H
 #define _NTIRPC_RPC_HAPROXY_H
 

@@ -74,6 +74,7 @@
 #include <rpc/svc_auth.h>
 #include <rpc/svc_rqst.h>
 #include <rpc/xdr_ioq.h>
+#include <arpa/inet.h>
 
 #include "rpc_com.h"
 #include "clnt_internal.h"
@@ -81,6 +82,7 @@
 #include "svc_xprt.h"
 #include "rpc_dplx_internal.h"
 #include "svc_ioq.h"
+#include "tls.h"
 
 static void svc_vc_rendezvous_ops(SVCXPRT *);
 static void svc_vc_override_ops(SVCXPRT *, SVCXPRT *);
@@ -438,6 +440,7 @@ svc_vc_rendezvous(SVCXPRT *xprt)
 	socklen_t len;
 	static int n = 1;
 	struct timeval timeval;
+	struct sockaddr *sa;
 
 	XPRT_AUTO_TRACEPOINT(xprt, rendezvous_start, TRACE_INFO,
 		"rendezvous_start");
@@ -504,6 +507,28 @@ svc_vc_rendezvous(SVCXPRT *xprt)
 	memcpy(newxprt->xp_remote.nb.buf, &addr, len);
 	newxprt->xp_remote.nb.len = len;
 	XPRT_TRACE(newxprt, __func__, __func__, __LINE__);
+
+	sa = (struct sockaddr *)newxprt->xp_remote.nb.buf;
+	/* Store client information (IP & Port) in SVCXPRT */
+	if (newxprt->xp_remote.nb.len > 0 && sa != NULL) {
+		if (sa->sa_family == AF_INET) {
+			struct sockaddr_in *sin = (struct sockaddr_in *)sa;
+			inet_ntop(AF_INET, &sin->sin_addr, newxprt->xp_clnt_addr,
+					sizeof(newxprt->xp_clnt_addr));
+			newxprt->xp_clnt_port = ntohs(sin->sin_port);
+		} else if (sa->sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)sa;
+			inet_ntop(AF_INET6, &sin6->sin6_addr, newxprt->xp_clnt_addr,
+					sizeof(newxprt->xp_clnt_addr));
+			newxprt->xp_clnt_port = ntohs(sin6->sin6_port);
+		} else {
+			snprintf(newxprt->xp_clnt_addr, sizeof(newxprt->xp_clnt_addr), "unknown");
+			newxprt->xp_clnt_port = 0;
+		}
+	} else {
+		snprintf(newxprt->xp_clnt_addr, sizeof(newxprt->xp_clnt_addr), "no_addr");
+		newxprt->xp_clnt_port = 0;
+	}
 
 	/* XXX fvdl - is this useful? (Yes.  Matt) */
 	if (si.si_proto == IPPROTO_TCP) {
@@ -610,6 +635,12 @@ svc_vc_destroy_task(struct work_pool_entry *wpe)
 	close_fd = ((xp_flags & SVC_XPRT_FLAG_CLOSE) &&
 		rec->xprt.xp_fd != RPC_ANYFD);
 	if (close_fd) {
+#ifdef USE_TLS
+		/*   need to tell the client about TLS Connection closure */
+		SVCXPRT *xprt = &rec->xprt;
+
+		svc_tls_close(xprt);
+#endif
 		/* Shutting down without releasing the fd, since
 		 * xp_free_user_data() might be using it */
 		(void)shutdown(rec->xprt.xp_fd, SHUT_RDWR);
@@ -979,7 +1010,7 @@ static enum haproxy_ret_code handle_haproxy_header_local_cmd(
 	SVCXPRT *xprt, struct proxy_header_part *proxy_header_part)
 {
 	enum haproxy_ret_code ret;
-	__warnx(TIRPC_DEBUG_FLAG_EVENT,
+	__warnx(TIRPC_DEBUG_FLAG_RPC_RDMA,
 		"%s: %p fd %d proxy ignored for local. len ignored: %d",
 		__func__, xprt, xprt->xp_fd, proxy_header_part->len);
 	const enum haproxy_ret_code ignore_remaining_data_result =
@@ -1189,9 +1220,30 @@ svc_vc_recv(SVCXPRT *xprt)
 
 	if (!xd->sx_fbtbc) {
 again:
-
+#ifdef USE_TLS
+               /* This is stunnel like TLS handshake request handling
+                * this internally does handshake if this is handshake msg*/
+		if (!((xprt)->xp_tls.not_first_packet)) {
+			if (is_handshake_msg(xprt)) {
+				(xprt)->xp_tls.not_first_packet = true;
+				xd->sx_fbtbc = 0;
+				if (unlikely(svc_rqst_rearm_events(xprt,
+								SVC_XPRT_FLAG_ADDED_RECV))) {
+					__warnx(TIRPC_DEBUG_FLAG_ERROR,
+							"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
+							__func__, xprt, xprt->xp_fd);
+					SVC_DESTROY(xprt);
+				}
+				return SVC_STAT(xprt);
+			}
+			(xprt)->xp_tls.not_first_packet = true;
+		}
+		rlen = svc_tls_recv(xprt, &xd->sx_fbtbc, BYTES_PER_XDR_UNIT,
+				    hap_again ? MSG_DONTWAIT : MSG_WAITALL);
+#else
 		rlen = recv(xprt->xp_fd, &xd->sx_fbtbc, BYTES_PER_XDR_UNIT,
-			    hap_again ? MSG_DONTWAIT : MSG_WAITALL);
+				    hap_again ? MSG_DONTWAIT : MSG_WAITALL);
+#endif
 
 		if (unlikely(rlen < 0)) {
 			code = errno;
@@ -1205,9 +1257,9 @@ again:
 						xprt,
 						SVC_XPRT_FLAG_ADDED_RECV))) {
 					__warnx(TIRPC_DEBUG_FLAG_ERROR,
-						"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
+						"%s: %p fd %d svc_rqst_rearm_events failed (will set dead) - clientip: %s:%u",
 						"svc_vc_wait",
-						xprt, xprt->xp_fd);
+						xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 					SVC_DESTROY(xprt);
 					code = EINVAL;
 				}
@@ -1216,8 +1268,8 @@ again:
 				return SVC_STAT(xprt);
 			}
 			__warnx(TIRPC_DEBUG_FLAG_WARN,
-				"%s: %p fd %d recv errno %d (will set dead)",
-				"svc_vc_wait", xprt, xprt->xp_fd, code);
+				"%s: %p fd %d recv errno %d (will set dead) - clientip: %s:%u",
+				"svc_vc_wait", xprt, xprt->xp_fd, code, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			SVC_DESTROY(xprt);
 
 			XPRT_AUTO_TRACEPOINT(xprt, recv_err,
@@ -1227,8 +1279,8 @@ again:
 
 		if (unlikely(!rlen)) {
 			__warnx(TIRPC_DEBUG_FLAG_SVC_VC,
-				"%s: %p fd %d recv closed (will set dead)",
-				"svc_vc_wait", xprt, xprt->xp_fd);
+				"%s: %p fd %d recv closed (will set dead) - clientip: %s:%u",
+				"svc_vc_wait", xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			SVC_DESTROY(xprt);
 
 			XPRT_AUTO_TRACEPOINT(xprt, recv_empty,
@@ -1243,6 +1295,16 @@ again:
 			"sx_fbtbc = %08x", (int)xd->sx_fbtbc);
 
 		if (xd->sx_fbtbc == PP2_SIG_UINT32) {
+			/* Since this is haproxy header clear off sx_fbtbc
+			 * In case of HAPROXY_RET_CODE__IGNORE_LOCAL,
+			 * handle_haproxy_header() do rearm the xprt recv fd.
+			 * causing a race if the thread gets scheduled
+			 * out after rearm and epoll_wait gets data available
+			 * event, then new recv endup in elsecase
+			 * "if (!xd->sx_fbtbc)"
+			 * and will cause uv to NULL */
+			xd->sx_fbtbc = 0;
+
 			/* HA Proxy V2? */
 			enum haproxy_ret_code ret = handle_haproxy_header(xprt);
 			switch (ret) {
@@ -1252,17 +1314,18 @@ again:
 					return SVC_STAT(xprt);
 				}
 				/* Now look to see if there's more... */
-	                        xd->sx_fbtbc = 0;
 				hap_again = true;
+#ifdef USE_TLS
+				xprt->xp_tls.not_first_packet = false;
+#endif
 				goto again;
 			case HAPROXY_RET_CODE__FAILURE:
 				SVC_DESTROY(xprt);
 				return SVC_STAT(xprt);
 			case HAPROXY_RET_CODE__IGNORE_LOCAL:
-				/* clear off sx_fbtbc */
-	                        xd->sx_fbtbc = 0;
 				return SVC_STAT(xprt);
 			case HAPROXY_RET_CODE__NOT_HAPROXY:
+				xd->sx_fbtbc = PP2_SIG_UINT32;
 				break;
 			}
 		}
@@ -1276,8 +1339,8 @@ again:
 
 		if (unlikely(!xd->sx_fbtbc)) {
 			__warnx(TIRPC_DEBUG_FLAG_ERROR,
-				"%s: %p fd %d fragment is zero (will set dead)",
-				__func__, xprt, xprt->xp_fd);
+				"%s: %p fd %d fragment is zero (will set dead) - clientip: %s:%u",
+				__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			SVC_DESTROY(xprt);
 
 			XPRT_AUTO_TRACEPOINT(xprt, recv_no_record,
@@ -1295,22 +1358,25 @@ again:
 		uv = IOQ_(TAILQ_LAST(&xioq->ioq_uv.uvqh.qh, poolq_head_s));
 		flags = uv->u.uio_flags;
 	}
-
+#ifdef USE_TLS
+	rlen = svc_tls_recv(xprt, uv->v.vio_tail, xd->sx_fbtbc, MSG_DONTWAIT);
+#else
 	rlen = recv(xprt->xp_fd, uv->v.vio_tail, xd->sx_fbtbc, MSG_DONTWAIT);
+#endif
 
 	if (unlikely(rlen < 0)) {
 		code = errno;
 
 		if (code == EAGAIN || code == EWOULDBLOCK) {
 			__warnx(TIRPC_DEBUG_FLAG_SVC_VC,
-				"%s: %p fd %d recv errno %d (try again)",
-				__func__, xprt, xprt->xp_fd, code);
+				"%s: %p fd %d recv errno %d (try again) - clientip: %s:%u",
+				__func__, xprt, xprt->xp_fd, code, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			if (unlikely(svc_rqst_rearm_events(
 						xprt,
 						SVC_XPRT_FLAG_ADDED_RECV))) {
 				__warnx(TIRPC_DEBUG_FLAG_ERROR,
-					"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
-					__func__, xprt, xprt->xp_fd);
+					"%s: %p fd %d svc_rqst_rearm_events failed (will set dead) - clientip: %s:%u",
+					__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 				SVC_DESTROY(xprt);
 				code = EINVAL;
 			}
@@ -1321,8 +1387,8 @@ again:
 			return SVC_STAT(xprt);
 		}
 		__warnx(TIRPC_DEBUG_FLAG_ERROR,
-			"%s: %p fd %d recv errno %d (will set dead)",
-			__func__, xprt, xprt->xp_fd, code);
+			"%s: %p fd %d recv errno %d (will set dead) - clientip: %s:%u",
+			__func__, xprt, xprt->xp_fd, code, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 		SVC_DESTROY(xprt);
 
 		XPRT_AUTO_TRACEPOINT(xprt, recv_error,
@@ -1333,8 +1399,8 @@ again:
 
 	if (unlikely(!rlen)) {
 		__warnx(TIRPC_DEBUG_FLAG_SVC_VC,
-			"%s: %p fd %d recv closed (will set dead)",
-			__func__, xprt, xprt->xp_fd);
+			"%s: %p fd %d recv closed (will set dead) - clientip: %s:%u",
+			__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 		SVC_DESTROY(xprt);
 
 		XPRT_AUTO_TRACEPOINT(xprt, recv_closed,
@@ -1358,14 +1424,18 @@ again:
 		if (unlikely(svc_rqst_rearm_events(xprt,
 						   SVC_XPRT_FLAG_ADDED_RECV))) {
 			__warnx(TIRPC_DEBUG_FLAG_ERROR,
-				"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
-				__func__, xprt, xprt->xp_fd);
+				"%s: %p fd %d svc_rqst_rearm_events failed (will set dead) - clientip: %s:%u",
+				__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 			XPRT_UNIQUE_AUTO_TRACEPOINT(xprt, rearm_failed,
 				TRACE_ERR, "Rearm failed");
 			SVC_DESTROY(xprt);
 		} else {
 			XPRT_UNIQUE_AUTO_TRACEPOINT(xprt, recv_exit,
 				TRACE_DEBUG, "recv exit");
+#if USE_TLS
+			if (svc_tls_datapending(xprt) == true)
+				svc_tls_send_event(xprt);
+#endif
 		}
 
 		return SVC_STAT(xprt);
@@ -1385,8 +1455,8 @@ again:
 
 	if (unlikely(svc_rqst_rearm_events(xprt, SVC_XPRT_FLAG_ADDED_RECV))) {
 		__warnx(TIRPC_DEBUG_FLAG_ERROR,
-			"%s: %p fd %d svc_rqst_rearm_events failed (will set dead)",
-			__func__, xprt, xprt->xp_fd);
+			"%s: %p fd %d svc_rqst_rearm_events failed (will set dead) - clientip: %s:%u",
+			__func__, xprt, xprt->xp_fd, xprt->xp_clnt_addr, xprt->xp_clnt_port);
 		xdr_ioq_destroy(xioq, xioq->ioq_s.qsize);
 		SVC_DESTROY(xprt);
 
@@ -1395,6 +1465,11 @@ again:
 
 		return SVC_STAT(xprt);
 	}
+
+#if USE_TLS
+	if (svc_tls_datapending(xprt) == true)
+		svc_tls_send_event(xprt);
+#endif
 
 	XPRT_UNIQUE_AUTO_TRACEPOINT(xprt, calling_svc_request,
 		TRACE_DEBUG, "Calling svc_request");

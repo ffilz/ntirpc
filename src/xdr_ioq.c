@@ -292,7 +292,7 @@ do_shrink(RDMAXPRT *rdma_xprt, struct rpc_io_bufs *io_buf, bool_t unlock)
 {
 	struct poolq_head *ioqh = get_data_poolq_head(io_buf, rdma_xprt);
 
-	__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s: Start shrinking xprt %p "
+	__warnx(TIRPC_DEBUG_FLAG_XDR, "%s: Start shrinking xprt %p "
 	    "io_buf %p refs %d ioqh %p count %d",
 	    __func__, rdma_xprt, io_buf, io_buf->refs, ioqh,
 	    ioqh->qcount);
@@ -386,7 +386,7 @@ get_lru_chunk_with_lock(RDMAXPRT *rdma_xprt, struct rpc_io_bufs *cur_io_buf)
 			rdma_xprt->io_bufs_count--;
 			rdma_xprt->io_bufs.qcount--;
 
-			__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s: xprt %p shrink "
+			__warnx(TIRPC_DEBUG_FLAG_XDR, "%s: xprt %p shrink "
 			    "io_buf %p refs %d io_bufs count %d %d",
 			    __func__, rdma_xprt, io_buf, io_buf->refs,
 			    rdma_xprt->io_bufs_count,
@@ -650,7 +650,7 @@ xdr_rdma_buf_pool_destroy_locked(struct poolq_head *ioqh,
 			    io_buf->buffer_aligned, io_buf->buffer_total));
 			io_buf->mr = NULL;
 
-			__warnx(TIRPC_DEBUG_FLAG_EVENT, "%s() Free xprt %p mr "
+			__warnx(TIRPC_DEBUG_FLAG_XDR, "%s() Free xprt %p mr "
 			    "io_bufs %p size %u io_buf %p", __func__, rdma_xprt,
 			    io_buf->buffer_aligned, io_buf->buffer_total, io_buf);
 
@@ -1000,12 +1000,12 @@ xdr_ioq_getstartdatapos_rdma(XDR *xdrs, u_int start, u_int datalen)
 	}
 
 	/*
-	 * Small RDMA Writes
-	 * If data is inline, it should be part of nfs_buffer itself.
-	 * So, to avoid the ILLEGAL_OP, start should advance by datalen
-	 * to pick the correct OP while decoding the COMPOUND ops.
+	 * Small RDMA Writes (Inline RDMA)
+	 * The write data fits entirely within the current (NFS header) UV
+	 * at the current XDR position.  Return 'start' unchanged so that
+	 * XDR_FILLBUFS reads the actual data bytes.
 	 */
-	return start + datalen;
+	return start;
 
 }
 
@@ -1029,9 +1029,15 @@ xdr_ioq_getenddatapos_rdma(XDR *xdrs, u_int start, u_int datalen)
 	 * next nfs header in compound op. */
 	if (datalen > ((uintptr_t)xdrs->x_v.vio_tail - (uintptr_t)xdrs->x_data)) {
 		offset = (uintptr_t)xdrs->x_v.vio_tail - (uintptr_t)xdrs->x_data;
+		return start - offset;
 	}
 
-	return start - offset;
+	/* Inline RDMA: 'start' is the position of the first data byte
+	 * (getstartdatapos returned it unchanged).  'datalen' here is
+	 * RNDUP(data_len), i.e. the data bytes plus any XDR alignment
+	 * padding.  Advance past both so the decoder is positioned at
+	 * the start of the next compound op. */
+	return start + datalen;
 }
 
 static bool
@@ -1857,7 +1863,7 @@ xdr_ioq_allochdrs(XDR *xdrs, u_int start, xdr_vio *vector, int iov_count)
 
 	while (idx < iov_count) {
 		/* Another TRAILER buffer to manage */
-		vio_type vt = vector[idx].vio_type;
+		vio_type_t vt = vector[idx].vio_type;
 
 		__warnx(TIRPC_DEBUG_FLAG_XDR,
 			"Calling xdr_ioq_use_or_allocate for idx %d for %s",
