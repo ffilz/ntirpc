@@ -68,32 +68,6 @@ static uint64_t next_id;
 #endif				/* 0 */
 #define free_buffer(addr,size) mem_free((addr), size)
 
-#define NS_PER_SEC  ((uint64_t) 1000000000)
-/**
- * @brief Get the abs difference between two timespecs in nsecs
- *
- * useful for cheap time calculation. Works with Dr. Who...
- *
- * @param[in] start timespec of before end
- * @param[in] end   timespec after start time
- *
- * @return Elapsed time in nsecs
- */
-static inline uint64_t
-timespec_diff(const struct timespec *start,
-              const struct timespec *end)
-{
-        if ((end->tv_sec > start->tv_sec)
-            || (end->tv_sec == start->tv_sec
-                && end->tv_nsec >= start->tv_nsec)) {
-                return (end->tv_sec - start->tv_sec) * NS_PER_SEC +
-                    (end->tv_nsec - start->tv_nsec);
-        } else {
-                return (start->tv_sec - end->tv_sec) * NS_PER_SEC +
-                    (start->tv_nsec - end->tv_nsec);
-        }
-}
-
 struct xdr_ioq_uv *
 xdr_ioq_uv_create(size_t size, u_int uio_flags)
 {
@@ -218,6 +192,32 @@ xdr_ioq_uv_recycle(struct poolq_head *ioqh, struct poolq_entry *have)
 }
 
 #ifdef USE_RPC_RDMA
+
+#define NS_PER_SEC  ((uint64_t) 1000000000)
+/**
+ * @brief Get the abs difference between two timespecs in nsecs
+ *
+ * useful for cheap time calculation. Works with Dr. Who...
+ *
+ * @param[in] start timespec of before end
+ * @param[in] end   timespec after start time
+ *
+ * @return Elapsed time in nsecs
+ */
+static inline uint64_t
+timespec_diff(const struct timespec *start,
+              const struct timespec *end)
+{
+        if ((end->tv_sec > start->tv_sec)
+            || (end->tv_sec == start->tv_sec
+                && end->tv_nsec >= start->tv_nsec)) {
+                return (end->tv_sec - start->tv_sec) * NS_PER_SEC +
+                    (end->tv_nsec - start->tv_nsec);
+        } else {
+                return (start->tv_sec - end->tv_sec) * NS_PER_SEC +
+                    (start->tv_nsec - end->tv_nsec);
+        }
+}
 
 static struct rpc_io_bufs *
 get_parent_chunk(struct poolq_entry *have)
