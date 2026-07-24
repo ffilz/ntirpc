@@ -207,6 +207,10 @@ static const struct netid_af na_cvt[] = {
 #ifdef RPC_VSOCK
 	{"vsock", AF_VSOCK, PF_VSOCK},
 #endif /* VSOCK */
+#ifdef USE_RPC_RDMA
+	{"rdma", AF_INET, 0},	/* RDMA over IPv4 */
+	{"rdma6", AF_INET6, 0},	/* RDMA over IPv6 */
+#endif
 	{"local", AF_LOCAL, 0}
 };
 
