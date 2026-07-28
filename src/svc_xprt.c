@@ -346,7 +346,6 @@ svc_xprt_foreach(svc_xprt_each_func_t each_f, void *arg)
 	struct opr_rbtree_node *n;
 	uint64_t tgen;
 	int p_ix;
-	int x_ix;
 	int restarts;
 
 	if (svc_xprt_init_failure())
@@ -367,11 +366,8 @@ svc_xprt_foreach(svc_xprt_each_func_t each_f, void *arg)
 
 		rwlock_wrlock(&t->lock);	/* t WLOCKED */
 		tgen = t->t.gen;
-		x_ix = 0;
 		n = opr_rbtree_first(&t->t);
 		while (n != NULL) {
-			++x_ix;	/* diagnostic, index into logical srec
-				 * sequence */
 			rec = opr_containerof(n, struct rpc_dplx_rec, fd_node);
 			sk.xprt.xp_fd = rec->xprt.xp_fd;
 
