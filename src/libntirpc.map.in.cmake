@@ -81,6 +81,7 @@ NTIRPC_${NTIRPC_VERSION_BASE} {
     endrpcent;
 
     # f*
+    free_sperror;
     freenetconfigent;
 
     # g*

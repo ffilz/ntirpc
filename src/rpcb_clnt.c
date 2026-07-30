@@ -296,7 +296,7 @@ static CLIENT *getclnthandle(const char *host, const struct netconfig *nconf,
 
 		t = rpc_sperror(&client->cl_error, __func__);
 		__warnx(TIRPC_DEBUG_FLAG_CLNT_RPCB, "%s", t);
-		mem_free(t, RPC_SPERROR_BUFLEN);
+		free_sperror(t);
 
 		addr_to_delete.len = addr->len;
 		addr_to_delete.buf = (char *)mem_zalloc(addr->len);
@@ -413,7 +413,7 @@ static CLIENT *getclnthandle(const char *host, const struct netconfig *nconf,
 
 		t = rpc_sperror(&client->cl_error, __func__);
 		__warnx(TIRPC_DEBUG_FLAG_CLNT_RPCB, "%s", t);
-		mem_free(t, RPC_SPERROR_BUFLEN);
+		free_sperror(t);
 	}
 	if (res)
 		freeaddrinfo(res);
@@ -489,7 +489,7 @@ rpcb_set(rpcprog_t program, rpcvers_t version, const struct netconfig *nconf,
 		char *t = rpc_sperror(&cc->cc_error, __func__);
 
 		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s", t);
-		mem_free(t, RPC_SPERROR_BUFLEN);
+		free_sperror(t);
 	}
 
 	clnt_req_release(cc);
@@ -546,7 +546,7 @@ rpcb_unset(rpcprog_t program, rpcvers_t version,
 		char *t = rpc_sperror(&cc->cc_error, __func__);
 
 		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s", t);
-		mem_free(t, RPC_SPERROR_BUFLEN);
+		free_sperror(t);
 	}
 
 	clnt_req_release(cc);
@@ -844,7 +844,7 @@ __rpcb_findaddr_timed(rpcprog_t program, rpcvers_t version,
 	t = rpc_sperror(&client->cl_error, __func__);
 
 	__warnx(TIRPC_DEBUG_FLAG_CLNT_RPCB, "%s", t);
-	mem_free(t, RPC_SPERROR_BUFLEN);
+	free_sperror(t);
 
  done:
 	if (ua)
@@ -970,7 +970,7 @@ rpcb_getmaps(const struct netconfig *nconf, const char *host)
  error:
 	t = rpc_sperror(&cc->cc_error, __func__);
 	__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s", t);
-	mem_free(t, RPC_SPERROR_BUFLEN);
+	free_sperror(t);
 
  done:
 	clnt_req_release(cc);
@@ -1159,7 +1159,7 @@ boolrpcb_gettime(const char *host, time_t *timep)
 		char *t = rpc_sperror(&cc->cc_error, __func__);
 
 		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s", t);
-		mem_free(t, RPC_SPERROR_BUFLEN);
+		free_sperror(t);
 	}
 
 	clnt_req_release(cc);
@@ -1209,7 +1209,7 @@ char *rpcb_taddr2uaddr(struct netconfig *nconf, struct netbuf *taddr)
 		char *t = rpc_sperror(&cc->cc_error, __func__);
 
 		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s", t);
-		mem_free(t, RPC_SPERROR_BUFLEN);
+		free_sperror(t);
 	}
 
 	clnt_req_release(cc);
@@ -1259,7 +1259,7 @@ struct netbuf *rpcb_uaddr2taddr(struct netconfig *nconf, char *uaddr)
 		char *t = rpc_sperror(&cc->cc_error, __func__);
 
 		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s", t);
-		mem_free(t, RPC_SPERROR_BUFLEN);
+		free_sperror(t);
 		mem_free(taddr, sizeof(*taddr));
 		taddr = NULL;
 	}
@@ -1322,7 +1322,7 @@ static CLIENT *local_rpcb(const char *tag)
 	t = rpc_sperror(&client->cl_error, tag);
 
 	__warnx(TIRPC_DEBUG_FLAG_CLNT_RPCB, "%s", t);
-	mem_free(t, RPC_SPERROR_BUFLEN);
+	free_sperror(t);
 
 	/* Save client for error return */
 
