@@ -103,6 +103,9 @@ endif(USE_TLS)
 
 option(PROXY_PROTOCOL_PARSE_COMMON_NETWORK_ID "Enable parsing of common network id from haproxy TLV" OFF)
 
+# Synced from USE_NFS_RDMA when built embedded in Ganesha.
+# When built standalone, set -DUSE_RPC_RDMA=ON to enable; cmake will
+# fail with FATAL_ERROR if the RDMA libraries are not present.
 option(USE_RPC_RDMA "platform supports RDMA" OFF)
 if (USE_RPC_RDMA)
   find_package(RDMA REQUIRED)
@@ -275,6 +278,7 @@ message(STATUS)
 message(STATUS "-------------------------------------------------------")
 message(STATUS "TIRPC_EPOLL = ${TIRPC_EPOLL}")
 message(STATUS "USE_RPC_RDMA = ${USE_RPC_RDMA}")
+message(STATUS "  (standalone build: cmake -DUSE_RPC_RDMA=ON /path/to/libntirpc)")
 message(STATUS "USE_GSS = ${USE_GSS}")
 message(STATUS "USE_PROFILE = ${USE_PROFILE}")
 message(STATUS "USE_LTTNG_NTIRPC = ${USE_LTTNG_NTIRPC}")
