@@ -375,14 +375,28 @@ svc_reg(SVCXPRT *xprt, const rpcprog_t prog, const rpcvers_t vers,
 	if ((xprt->xp_netid == NULL) && (flag == 1) && netid)
 		((SVCXPRT *) xprt)->xp_netid = mem_strdup(netid);
 
- rpcb_it:
+rpcb_it:
 	rwlock_unlock(&svc_lock);
 	/* now register the information with the local binder service */
 	if (nconf && ((xprt->xp_flags & SVC_XPRT_FLAG_NO_SET) == 0)) {
+		__warnx(TIRPC_DEBUG_FLAG_SVC,
+			"%s: Registering prog=%u vers=%u netid=%s",
+			__func__, (unsigned)prog, (unsigned)vers,
+			nconf->nc_netid);
+
+		if (!xprt->xp_local.nb.buf || xprt->xp_local.nb.len == 0) {
+			__warnx(TIRPC_DEBUG_FLAG_SVC | TIRPC_DEBUG_FLAG_WARN,
+				"%s: xp_local.nb is empty or invalid",
+				__func__);
+		}
+
 		/*LINTED const castaway */
-		dummy =
-		    rpcb_set(prog, vers, (struct netconfig *)nconf,
-			     &((SVCXPRT *) xprt)->xp_local.nb);
+		dummy = rpcb_set(prog, vers, (struct netconfig *)nconf,
+				 &((SVCXPRT *)xprt)->xp_local.nb);
+
+		__warnx(TIRPC_DEBUG_FLAG_SVC,
+			"%s: rpcb_set returned %s",
+			__func__, dummy ? "TRUE" : "FALSE");
 		return (dummy);
 	}
 	return (true);

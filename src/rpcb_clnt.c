@@ -459,13 +459,18 @@ rpcb_set(rpcprog_t program, rpcvers_t version, const struct netconfig *nconf,
 	/* convert to universal */
 	/*LINTED const castaway */
 	parms.r_addr =
-	    taddr2uaddr((struct netconfig *)nconf, (struct netbuf *)address);
+		taddr2uaddr((struct netconfig *)nconf,
+			    (struct netbuf *)address);
 	if (!parms.r_addr) {
 		CLNT_DESTROY(client);
-		__warnx(TIRPC_DEBUG_FLAG_WARN, "%s: %s",
-			__func__, clnt_sperrno(RPC_N2AXLATEFAILURE));
+		__warnx(TIRPC_DEBUG_FLAG_WARN,
+			"%s: taddr2uaddr failed for netid=%s: %s",
+			__func__, nconf->nc_netid,
+			clnt_sperrno(RPC_N2AXLATEFAILURE));
 		return (false);	/* no universal address */
 	}
+	__warnx(TIRPC_DEBUG_FLAG_CLNT_RPCB,
+		"%s: Universal address: %s", __func__, parms.r_addr);
 	parms.r_prog = program;
 	parms.r_vers = version;
 	parms.r_netid = nconf->nc_netid;
