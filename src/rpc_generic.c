@@ -593,7 +593,7 @@ rpc_nullproc(CLIENT *clnt)
 		char *t = rpc_sperror(&cc->cc_error, __func__);
 
 		__warnx(TIRPC_DEBUG_FLAG_ERROR, "%s", t);
-		mem_free(t, RPC_SPERROR_BUFLEN);
+		free_sperror(t);
 		clnt_req_release(cc);
 		return (NULL);
 	}

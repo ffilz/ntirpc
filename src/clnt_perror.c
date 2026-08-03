@@ -172,6 +172,18 @@ rpc_sperror(const struct rpc_err *e, const char *s)
 	return (strstart);
 }
 
+/*
+ * Free a string returned by rpc_sperror(). Callers must not free() it
+ * directly or pass any other size to mem_free() - RPC_SPERROR_BUFLEN is
+ * an internal implementation detail of rpc_sperror().
+ */
+void
+free_sperror(char *err)
+{
+	if (err != NULL)
+		mem_free(err, RPC_SPERROR_BUFLEN);
+}
+
 void
 rpc_perror(const struct rpc_err *e, const char *s)
 {
@@ -182,7 +194,7 @@ rpc_perror(const struct rpc_err *e, const char *s)
 
 	t = rpc_sperror(e, s);
 	(void)fprintf(stderr, "%s\n", t);
-	mem_free(t, RPC_SPERROR_BUFLEN);
+	free_sperror(t);
 }
 
 static const char *const rpc_errlist[] = {

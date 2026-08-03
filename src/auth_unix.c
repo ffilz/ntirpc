@@ -207,7 +207,7 @@ out_err:
 	result->ah_error.re_errno = save_errno;
 	t = rpc_sperror(&result->ah_error, __func__);
 	__warnx(TIRPC_DEBUG_FLAG_AUTH, "%s", t);
-	mem_free(t, 0);
+	free_sperror(t);
 	return result;
 }
 

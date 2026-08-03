@@ -74,6 +74,7 @@ struct rpc_err {
 
 extern void rpc_perror(const struct rpc_err *, const char *); /* stderr */
 extern char *rpc_sperror(const struct rpc_err *, const char *); /* string */
+extern void free_sperror(char *); /* free result of rpc_sperror() */
 
 #ifdef __cplusplus
 }
