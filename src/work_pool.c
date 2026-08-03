@@ -138,6 +138,21 @@ work_pool_init(struct work_pool *pool, const char *name,
 	return work_pool_spawn(pool);
 }
 
+bool
+work_pool_update(struct work_pool *pool, struct work_pool_params *params)
+{
+	if (params->thr_stack_size != pool->params.thr_stack_size) {
+		__warnx(TIRPC_DEBUG_FLAG_ERROR,
+			"%s() can't change pthread's stack size to %" PRIu32,
+			__func__, params->thr_stack_size);
+		return false;
+	}
+
+	pool->params.thrd_max = params->thrd_max;
+	pool->params.thrd_min = params->thrd_min;
+	return true;
+}
+
 /**
  * @brief The worker thread
  *

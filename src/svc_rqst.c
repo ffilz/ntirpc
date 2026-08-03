@@ -463,6 +463,11 @@ svc_rqst_new_evchan(uint32_t *chan_id /* OUT */, void *u_data, uint32_t flags)
 		fun = svc_rqst_epoll_loop;
 
 		/* XXX improve this too */
+		/* max_events is dynamic config, latest value will be applied
+		 * here in new event channel. The way it is used, that will be
+		 * OK even though memory is allocated, because each sr_rec
+		 * max_events and array.
+		 */
 		sr_rec->ev_u.epoll.max_events =
 		    __svc_params->ev_u.evchan.max_events;
 		sr_rec->ev_u.epoll.events = (struct epoll_event *)

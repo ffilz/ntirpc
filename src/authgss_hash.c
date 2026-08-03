@@ -125,6 +125,9 @@ authgss_hash_init(void)
 	mutex_lock(&authgss_hash_st.lock);
 
 	if (authgss_hash_st.initialized) {
+		/* Update */
+		authgss_hash_st.max_part =
+		    __svc_params->gss.max_ctx / authgss_hash_st.xt.npart;
 		mutex_unlock(&authgss_hash_st.lock);
 		return;
 	}

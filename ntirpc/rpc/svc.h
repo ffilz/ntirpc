@@ -99,6 +99,10 @@ enum xprt_stat {
 #define SVC_INIT_EPOLL          0x0002
 #define SVC_INIT_NOREG_XPRTS    0x0008
 #define SVC_INIT_BLKIN          0x0010
+/* Package init flags that can not be updated */
+#define SVC_INIT_NO_UPDATE (SVC_INIT_XPRTS | SVC_INIT_EPOLL | \
+			    SVC_INIT_NOREG_XPRTS | SVC_INIT_BLKIN)
+			
 
 #define SVC_SHUTDOWN_FLAG_NONE  0x0000
 
@@ -132,27 +136,25 @@ typedef struct svc_req *(*svc_xprt_alloc_fun_t) (SVCXPRT *, XDR *);
 typedef void (*svc_xprt_free_fun_t) (struct svc_req *, enum xprt_stat);
 
 typedef struct svc_init_params {
-	svc_xprt_fun_t disconnect_cb;
-	svc_xprt_alloc_fun_t alloc_cb;
-	svc_xprt_free_fun_t free_cb;
+	svc_xprt_fun_t disconnect_cb;	/* no dynamic update */
+	svc_xprt_alloc_fun_t alloc_cb;	/* no dynamic update */
+	svc_xprt_free_fun_t free_cb;	/* no dynamic update */
 
-	u_long flags;
-	u_int max_connections;	/* xprts */
-	u_int max_events;	/* evchan events */
-	u_int ioq_send_max;
-	u_int ioq_thrd_max;
-	u_int ioq_thrd_min;
-	u_int gss_ctx_hash_partitions;
-	u_int gss_max_ctx;
-	u_int gss_max_idle_gen;
-	u_int gss_max_gc;
-	uint32_t channels;
-	int32_t idle_timeout;
-	uint32_t thr_stack_size;
-#if defined(_USE_NFS_RDMA) || defined(USE_RPC_RDMA)
-	uint16_t nfs_rdma_port; /* Shared with Ganesha */
-	uint32_t max_rdma_connections;
-#endif
+	u_long flags;			/* no dynamic update */
+	u_int max_connections;		/* dynamnic, xprts */
+	u_int max_events;		/* dynamic, evchan events */
+	u_int ioq_send_max;		/* dynamic */
+	u_int ioq_thrd_max;		/* dynamic */
+	u_int ioq_thrd_min;		/* dynamic */
+	u_int gss_ctx_hash_partitions;	/* no dynamic update */
+	u_int gss_max_ctx;		/* dynamic */
+	u_int gss_max_idle_gen;		/* UNUSED */
+	u_int gss_max_gc;		/* dynamic */
+	uint32_t channels;		/* no dynamic update */
+	int32_t idle_timeout;		/* dynamic */
+	uint32_t thr_stack_size;	/* no dynamic update */
+	uint16_t nfs_rdma_port;		/* UNUSED */
+	uint32_t max_rdma_connections;	/* dynamic */
 } svc_init_params;
 
 /* Svc param flags */

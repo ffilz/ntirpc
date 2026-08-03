@@ -177,14 +177,16 @@ svc_xprt_lookup(int fd, svc_xprt_setup_t setup)
 		rwlock_wrlock(&t->lock);
 		nv = opr_rbtree_lookup(&t->t, &sk.fd_node);
 		if (!nv) {
+			u_int max_connections = __svc_params->max_connections;
+
 			if (atomic_inc_uint32_t(&svc_xprt_fd.connections)
-			    > __svc_params->max_connections) {
+			    > max_connections) {
 				atomic_dec_uint32_t(&svc_xprt_fd.connections);
 				rwlock_unlock(&t->lock);
 				__warnx(TIRPC_DEBUG_FLAG_ERROR,
 					"%s: fd %d max_connections %u exceeded",
 					__func__, fd,
-					__svc_params->max_connections);
+					max_connections);
 				return (NULL);
 			}
 			(*setup)(&xprt); /* zalloc, xp_refcnt = 1 */
@@ -518,13 +520,14 @@ svc_rdma_add_xprt_fd(SVCXPRT *xprt)
 	rwlock_wrlock(&t->lock);
 	nv = opr_rbtree_lookup(&t->t, &sk.fd_node);
 	if (!nv) {
+		u_int max_rdma_connections = __svc_params->max_rdma_connections;
+
 		if (atomic_fetch_uint32_t(&svc_xprt_fd.rdma_connections)
-			>= __svc_params->max_rdma_connections) {
+			>= max_rdma_connections) {
 			rwlock_unlock(&t->lock);
 			__warnx(TIRPC_DEBUG_FLAG_ERROR,
 			    "%s: fd %d max_rdma_connections %u exceeded\n",
-			    __func__, sk.xprt.xp_fd,
-			    __svc_params->max_rdma_connections);
+			    __func__, sk.xprt.xp_fd, max_rdma_connections);
 			SVC_DESTROY(&rdma_xprt->sm_dr.xprt);
 			return -1;
 		}

@@ -70,7 +70,6 @@ struct svc_params {
 	struct {
 		int ctx_hash_partitions;
 		int max_ctx;
-		int max_idle_gen;
 		int max_gc;
 	} gss;
 
@@ -84,7 +83,6 @@ struct svc_params {
 	u_int max_connections;
 	int32_t idle_timeout;
 #if defined(_USE_NFS_RDMA) || defined(USE_RPC_RDMA)
-	uint16_t nfs_rdma_port;
 	u_int max_rdma_connections;
 #endif
 };

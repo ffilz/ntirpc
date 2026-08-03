@@ -133,6 +133,8 @@ svc_init(svc_init_params *params)
 {
 	struct work_pool_params work_pool_params = {0,};
 	uint32_t channels = params->channels ? params->channels : 8;
+	bool update = false;
+	static svc_init_params original;
 
 #ifdef USE_MONITORING
 	/* Initialize metrics for libntirpc */
@@ -141,15 +143,33 @@ svc_init(svc_init_params *params)
 
 	mutex_lock(&__svc_params->mtx);
 	if (__svc_params->initialized) {
-		__warnx(TIRPC_DEBUG_FLAG_WARN,
-			"%s: multiple initialization attempt (nothing happens)",
-			__func__);
-		mutex_unlock(&__svc_params->mtx);
-		return true;
+		__warnx(TIRPC_DEBUG_FLAG_EVENT, "Update of svc parameters");
+		update = true;
+	} else {
+		original = *params;
 	}
-	__svc_params->disconnect_cb = params->disconnect_cb;
-	__svc_params->alloc_cb = params->alloc_cb;
-	__svc_params->free_cb = params->free_cb;
+
+	if (update) {
+		if (original.disconnect_cb != params->disconnect_cb ||
+		    original.alloc_cb != params->alloc_cb ||
+		    original.free_cb != params->free_cb ||
+		    (original.flags & SVC_INIT_NO_UPDATE) !=
+			(params->flags & SVC_INIT_NO_UPDATE) ||
+		    original.gss_ctx_hash_partitions !=
+			params->gss_ctx_hash_partitions ||
+		    original.channels != params->channels ||
+		    original.thr_stack_size != params->thr_stack_size) {
+			__warnx(TIRPC_DEBUG_FLAG_WARN,
+				"%s: attempt to change non-updateable svc param",
+				__func__);
+			mutex_unlock(&__svc_params->mtx);
+			return false;
+		}
+	} else {
+		__svc_params->disconnect_cb = params->disconnect_cb;
+		__svc_params->alloc_cb = params->alloc_cb;
+		__svc_params->free_cb = params->free_cb;
+	}
 
 	__svc_params->max_connections =
 	    (params->max_connections) ? params->max_connections : FD_SETSIZE;
@@ -204,17 +224,26 @@ svc_init(svc_init_params *params)
 		work_pool_params.thrd_max = work_pool_params.thrd_min +
 					    channels;
 
-	if (work_pool_init(&svc_work_pool, "svc_", &work_pool_params)) {
-		mutex_unlock(&__svc_params->mtx);
-		return false;
+	if (update) {
+		if (!work_pool_update(&svc_work_pool, &work_pool_params)) {
+			mutex_unlock(&__svc_params->mtx);
+			return false;
+		}
+	} else {
+		if (work_pool_init(&svc_work_pool, "svc_", &work_pool_params)) {
+			mutex_unlock(&__svc_params->mtx);
+			return false;
+		}
 	}
 
-	/* uses svc_work_pool */
-	svc_rqst_init(channels);
+	if (!update) {
+		/* uses svc_work_pool */
+		svc_rqst_init(channels);
 
-	if (svc_xprt_init()) {
-		mutex_unlock(&__svc_params->mtx);
-		return false;
+		if (svc_xprt_init()) {
+			mutex_unlock(&__svc_params->mtx);
+			return false;
+		}
 	}
 
 	if (params->gss_ctx_hash_partitions)
@@ -228,29 +257,24 @@ svc_init(svc_init_params *params)
 	else
 		__svc_params->gss.max_ctx = 16384; /* 16K clients */
 
-	/* XXX deprecating */
-	if (params->gss_max_idle_gen)
-		__svc_params->gss.max_idle_gen = params->gss_max_idle_gen;
-	else
-		__svc_params->gss.max_idle_gen = 1024;
-
 	if (params->gss_max_gc)
 		__svc_params->gss.max_gc = params->gss_max_gc;
 	else
 		__svc_params->gss.max_gc = 200;
 
 #ifdef USE_RPC_RDMA
-	rpc_rdma_internals_init();
-	__svc_params->nfs_rdma_port = params->nfs_rdma_port;
+	if (!update)
+		rpc_rdma_internals_init();
 	__svc_params->max_rdma_connections = params->max_rdma_connections;
 #endif
 
-	__svc_params->initialized = true;
+	if (!update)
+		__svc_params->initialized = true;
 
 	mutex_unlock(&__svc_params->mtx);
 
 #if defined(_SC_IOV_MAX) /* IRIX, MacOS X, FreeBSD, Solaris, ... */
-	{
+	if (!update) {
 		/*
 		 * some glibc (e.g. 2.26 in Fedora 27 beta) always
 		 * return -1
