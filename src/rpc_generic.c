@@ -78,7 +78,8 @@ tirpc_thread_name(const char *p)
 }
 
 static void
-tirpc_free(void *p, size_t unused)
+tirpc_free(void *p, size_t unused, const char *file, int line,
+	   const char *function)
 {
 	free(p);
 }

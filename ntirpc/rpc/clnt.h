@@ -81,7 +81,8 @@
 				 ((s) == RPC_CANTDECODEARGS))
 
 struct clnt_req;
-typedef void (*clnt_req_freer)(struct clnt_req *, size_t);
+typedef void (*clnt_req_freer)(struct clnt_req *, size_t,  const char *, int,
+			       const char *);
 
 /*
  * Client rpc handle.

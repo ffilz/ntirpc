@@ -784,7 +784,7 @@ clnt_req_release(struct clnt_req *cc)
 	clnt_req_fini(cc);
 	CLNT_RELEASE(cc->cc_clnt, CLNT_RELEASE_FLAG_NONE);
 
-	(*cc->cc_free_cb)(cc, cc->cc_size);
+	(*cc->cc_free_cb)(cc, cc->cc_size, __FILE__, __LINE__, __func__);
 	return (refs);
 }
 
