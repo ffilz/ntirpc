@@ -14,9 +14,9 @@ include(${CMAKE_SOURCE_DIR}/cmake/maintainer_mode.cmake)
 project(NTIRPC C CXX)
 
 # version numbers
-set(NTIRPC_MAJOR_VERSION 14)
+set(NTIRPC_MAJOR_VERSION 15)
 # This is .0 for a release, .N for a stable branch, blank for development
-set(NTIRPC_MINOR_VERSION .1)
+set(NTIRPC_MINOR_VERSION .0)
 # -something for dev releases
 set(NTIRPC_VERSION_EXTRA )
 set(VERSION_COMMENT
