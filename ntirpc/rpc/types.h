@@ -167,7 +167,8 @@ typedef void *(*mem_2_size_t) (size_t, size_t,
 	     const char *file, int line, const char *function);
 typedef void *(*mem_p_size_t) (void *, size_t,
 	     const char *file, int line, const char *function);
-typedef void (*mem_free_size_t) (void *, size_t);
+typedef void (*mem_free_size_t) (void *, size_t,
+	     const char *file, int line, const char *function);
 typedef void (*mem_format_t) (const char *fmt, ...);
 typedef void (*mem_char_t) (const char *);
 
@@ -210,11 +211,8 @@ extern tirpc_pkg_params __ntirpc_pkg_params;
 #define mem_zalloc(size) __ntirpc_pkg_params.calloc_(1, (size), \
 			__FILE__, __LINE__, __func__)
 
-static inline void
-mem_free(void *p, size_t n)
-{
-	__ntirpc_pkg_params.free_size_(p, n);
-}
+#define mem_free(p, n) __ntirpc_pkg_params.free_size_((p), (n), \
+			__FILE__, __LINE__, __func__)
 
 /*
  * Uses allocator with indirections, if any.
